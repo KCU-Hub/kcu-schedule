@@ -3,6 +3,10 @@
 
 데이터 출처: https://www.cuk.edu/ajaxf/FrScheduleSvc/ScheduleListData.do
 (학교 홈페이지 학사일정 페이지가 내부적으로 호출하는 공개 엔드포인트, 로그인 불필요)
+
+실제 일정 내용이 바뀌지 않으면 출력 바이트가 항상 동일하도록 만든다
+(이벤트 정렬을 고정하고, 기존 파일에 있던 UID는 DTSTAMP도 그대로 유지).
+이래야 CI의 "변경된 경우에만 커밋" 로직이 매일 헛커밋을 만들지 않는다.
 """
 import hashlib
 import sys
@@ -50,7 +54,47 @@ def make_uid(item: dict) -> str:
     return f"{digest}@kcu-schedule"
 
 
-def build_calendar(years: list) -> Calendar:
+def load_previous_dtstamps(path: Path) -> dict:
+    """이전에 생성된 파일에서 UID별 DTSTAMP를 읽어온다. 없으면 빈 dict."""
+    if not path.exists():
+        return {}
+    try:
+        cal = Calendar.from_ical(path.read_bytes())
+    except Exception:
+        return {}
+    result = {}
+    for component in cal.walk():
+        if component.name != "VEVENT":
+            continue
+        uid = component.get("uid")
+        dtstamp = component.get("dtstamp")
+        if uid is not None and dtstamp is not None:
+            result[str(uid)] = dtstamp.dt
+    return result
+
+
+def collect_items(years: list) -> dict:
+    """연도별로 조회한 일정을 UID 기준으로 중복 제거해 dict로 반환한다."""
+    items_by_uid = {}
+    for year in years:
+        try:
+            items = fetch_year(year)
+        except Exception as exc:  # 네트워크/파싱 실패 시 해당 연도만 건너뜀
+            print(f"[WARN] {year}년 데이터 조회 실패: {exc}", file=sys.stderr)
+            continue
+
+        new_count = 0
+        for item in items:
+            uid = make_uid(item)
+            if uid not in items_by_uid:
+                items_by_uid[uid] = item
+                new_count += 1
+        print(f"{year}년: API {len(items)}건 조회, 신규 {new_count}건 추가")
+
+    return items_by_uid
+
+
+def build_calendar(items_by_uid: dict, previous_dtstamps: dict) -> Calendar:
     cal = Calendar()
     cal.add("prodid", "-//KCU Schedule Sync (unofficial)//kcu-schedule//KO")
     cal.add("version", "2.0")
@@ -60,51 +104,44 @@ def build_calendar(years: list) -> Calendar:
     cal.add("x-wr-timezone", TIMEZONE)
     cal.add("x-published-ttl", "P1D")
 
-    seen_uids = set()
-    total = 0
-    for year in years:
-        try:
-            items = fetch_year(year)
-        except Exception as exc:  # 네트워크/파싱 실패 시 해당 연도만 건너뜀
-            print(f"[WARN] {year}년 데이터 조회 실패: {exc}", file=sys.stderr)
-            continue
+    now = datetime.now(timezone.utc)
 
-        added_this_year = 0
-        for item in items:
-            uid = make_uid(item)
-            if uid in seen_uids:
-                continue
-            seen_uids.add(uid)
+    # 정렬 순서를 고정해야 API 응답 순서가 바뀌어도 출력 바이트가 동일하게 유지된다.
+    def sort_key(pair):
+        uid, item = pair
+        start = to_date(item["START_Y"], item["START_M"], item["START_D"])
+        end = to_date(item["END_Y"], item["END_M"], item["END_D"])
+        return (start, end, item["SUBJECT"], uid)
 
-            start = to_date(item["START_Y"], item["START_M"], item["START_D"])
-            end = to_date(item["END_Y"], item["END_M"], item["END_D"])
+    for uid, item in sorted(items_by_uid.items(), key=sort_key):
+        start = to_date(item["START_Y"], item["START_M"], item["START_D"])
+        end = to_date(item["END_Y"], item["END_M"], item["END_D"])
 
-            event = Event()
-            event.add("uid", uid)
-            event.add("summary", item["SUBJECT"])
-            event.add("dtstart", start)
-            event.add("dtend", end + timedelta(days=1))  # RFC5545: all-day DTEND는 배타적 경계
-            event.add("dtstamp", datetime.now(timezone.utc))
-            label = SCH_TYPE_LABEL.get(item.get("SCH_TYPE"), item.get("SCH_TYPE", ""))
-            if label:
-                event.add("categories", vText(label))
-            dept = item.get("DEPT_TYPE", "")
-            if dept:
-                event.add("description", f"담당: {dept}")
-            cal.add_component(event)
-            total += 1
-            added_this_year += 1
+        event = Event()
+        event.add("uid", uid)
+        event.add("summary", item["SUBJECT"])
+        event.add("dtstart", start)
+        event.add("dtend", end + timedelta(days=1))  # RFC5545: all-day DTEND는 배타적 경계
+        event.add("dtstamp", previous_dtstamps.get(uid, now))
+        label = SCH_TYPE_LABEL.get(item.get("SCH_TYPE"), item.get("SCH_TYPE", ""))
+        if label:
+            event.add("categories", vText(label))
+        dept = item.get("DEPT_TYPE", "")
+        if dept:
+            event.add("description", f"담당: {dept}")
+        cal.add_component(event)
 
-        print(f"{year}년: API {len(items)}건 조회, 신규 {added_this_year}건 추가")
-
-    print(f"총 {total}건의 일정을 캘린더에 담았습니다.")
+    print(f"총 {len(items_by_uid)}건의 일정을 캘린더에 담았습니다.")
     return cal
 
 
 def main():
     current_year = datetime.now().year
     years = list(range(current_year - 1, current_year + 3))
-    cal = build_calendar(years)
+
+    items_by_uid = collect_items(years)
+    previous_dtstamps = load_previous_dtstamps(OUTPUT_PATH)
+    cal = build_calendar(items_by_uid, previous_dtstamps)
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_bytes(cal.to_ical())
