@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""KCU 학사일정 공개 JSON을 가져와 ICS 캘린더 파일로 변환한다.
+"""KCU 학사일정 공개 JSON을 가져와 ICS 캘린더 + 웹페이지용 JSON으로 변환한다.
 
 데이터 출처: https://www.cuk.edu/ajaxf/FrScheduleSvc/ScheduleListData.do
 (학교 홈페이지 학사일정 페이지가 내부적으로 호출하는 공개 엔드포인트, 로그인 불필요)
 
 실제 일정 내용이 바뀌지 않으면 출력 바이트가 항상 동일하도록 만든다
-(이벤트 정렬을 고정하고, 기존 파일에 있던 UID는 DTSTAMP도 그대로 유지).
+(이벤트 정렬을 고정하고, 기존 ICS 파일에 있던 UID는 DTSTAMP도 그대로 유지).
 이래야 CI의 "변경된 경우에만 커밋" 로직이 매일 헛커밋을 만들지 않는다.
 """
 import hashlib
+import json
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -18,7 +19,9 @@ from icalendar import Calendar, Event, vText
 
 API_URL = "https://www.cuk.edu/ajaxf/FrScheduleSvc/ScheduleListData.do"
 SCH_DEPT_CD = "2"  # 학사일정 페이지가 실제로 사용하는 값(학부/대학교 기준)
-OUTPUT_PATH = Path(__file__).parent / "docs" / "kcu-schedule.ics"
+DOCS_DIR = Path(__file__).parent / "docs"
+ICS_OUTPUT_PATH = DOCS_DIR / "kcu-schedule.ics"
+JSON_OUTPUT_PATH = DOCS_DIR / "kcu-schedule.json"
 CAL_NAME = "고려사이버대학교 학사일정 (비공식)"
 TIMEZONE = "Asia/Seoul"
 
@@ -54,8 +57,18 @@ def make_uid(item: dict) -> str:
     return f"{digest}@kcu-schedule"
 
 
+def event_sort_key(uid: str, item: dict):
+    start = to_date(item["START_Y"], item["START_M"], item["START_D"])
+    end = to_date(item["END_Y"], item["END_M"], item["END_D"])
+    return (start, end, item["SUBJECT"], uid)
+
+
+def sorted_items(items_by_uid: dict):
+    return sorted(items_by_uid.items(), key=lambda pair: event_sort_key(*pair))
+
+
 def load_previous_dtstamps(path: Path) -> dict:
-    """이전에 생성된 파일에서 UID별 DTSTAMP를 읽어온다. 없으면 빈 dict."""
+    """이전에 생성된 ICS 파일에서 UID별 DTSTAMP를 읽어온다. 없으면 빈 dict."""
     if not path.exists():
         return {}
     try:
@@ -106,14 +119,7 @@ def build_calendar(items_by_uid: dict, previous_dtstamps: dict) -> Calendar:
 
     now = datetime.now(timezone.utc)
 
-    # 정렬 순서를 고정해야 API 응답 순서가 바뀌어도 출력 바이트가 동일하게 유지된다.
-    def sort_key(pair):
-        uid, item = pair
-        start = to_date(item["START_Y"], item["START_M"], item["START_D"])
-        end = to_date(item["END_Y"], item["END_M"], item["END_D"])
-        return (start, end, item["SUBJECT"], uid)
-
-    for uid, item in sorted(items_by_uid.items(), key=sort_key):
+    for uid, item in sorted_items(items_by_uid):
         start = to_date(item["START_Y"], item["START_M"], item["START_D"])
         end = to_date(item["END_Y"], item["END_M"], item["END_D"])
 
@@ -135,17 +141,44 @@ def build_calendar(items_by_uid: dict, previous_dtstamps: dict) -> Calendar:
     return cal
 
 
+def build_schedule_list(items_by_uid: dict) -> list:
+    """웹페이지가 fetch로 읽어들일 가벼운 JSON 배열을 만든다."""
+    result = []
+    for uid, item in sorted_items(items_by_uid):
+        start = to_date(item["START_Y"], item["START_M"], item["START_D"])
+        end = to_date(item["END_Y"], item["END_M"], item["END_D"])
+        sch_type = item.get("SCH_TYPE", "")
+        result.append({
+            "uid": uid,
+            "subject": item["SUBJECT"],
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+            "type": sch_type,
+            "type_label": SCH_TYPE_LABEL.get(sch_type, sch_type),
+            "dept": item.get("DEPT_TYPE", ""),
+        })
+    return result
+
+
 def main():
     current_year = datetime.now().year
     years = list(range(current_year - 1, current_year + 3))
 
     items_by_uid = collect_items(years)
-    previous_dtstamps = load_previous_dtstamps(OUTPUT_PATH)
+
+    previous_dtstamps = load_previous_dtstamps(ICS_OUTPUT_PATH)
     cal = build_calendar(items_by_uid, previous_dtstamps)
 
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_PATH.write_bytes(cal.to_ical())
-    print(f"저장 완료: {OUTPUT_PATH}")
+    DOCS_DIR.mkdir(parents=True, exist_ok=True)
+    ICS_OUTPUT_PATH.write_bytes(cal.to_ical())
+    print(f"저장 완료: {ICS_OUTPUT_PATH}")
+
+    schedule = build_schedule_list(items_by_uid)
+    JSON_OUTPUT_PATH.write_text(
+        json.dumps({"events": schedule}, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    print(f"저장 완료: {JSON_OUTPUT_PATH}")
 
 
 if __name__ == "__main__":

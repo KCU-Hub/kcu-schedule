@@ -3,82 +3,560 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KCU 학사일정 캘린더 구독</title>
+<meta name="description" content="고려사이버대학교 학사일정을 한눈에 보고, 캘린더 앱으로 구독하는 비공식 페이지">
+<title>KCU 학사일정 (비공식)</title>
 <style>
-  :root { color-scheme: light dark; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-    max-width: 640px;
-    margin: 60px auto;
-    padding: 0 20px;
-    line-height: 1.6;
-    color: #1a1a1a;
-    background: #fff;
+  :root {
+    color-scheme: light dark;
+    --bg: #f7f7f9;
+    --surface: #ffffff;
+    --surface-2: #eeeef2;
+    --border: #e2e2e7;
+    --text: #1a1a1e;
+    --text-muted: #6b6b74;
+    --accent: #a70638;
+    --accent-contrast: #ffffff;
+    --today-ring: #a70638;
+    --type-academic: #2f5fd6;
+    --type-event: #c8622f;
+    --sun: #d0405a;
+    --sat: #3767c9;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
   }
   @media (prefers-color-scheme: dark) {
-    body { color: #e8e8e8; background: #14141a; }
-    .box { background: #1f1f28 !important; border-color: #333 !important; }
-    code { background: #2a2a35 !important; }
-    a { color: #7dc4ff; }
+    :root {
+      --bg: #131317;
+      --surface: #1c1c22;
+      --surface-2: #23232b;
+      --border: #33333d;
+      --text: #eceef2;
+      --text-muted: #9b9ba5;
+      --accent: #ff5f86;
+      --accent-contrast: #1a1a1e;
+      --today-ring: #ff5f86;
+      --type-academic: #7fa4ff;
+      --type-event: #ffa06a;
+      --sun: #ff7d95;
+      --sat: #7ea6ff;
+      --shadow: 0 1px 3px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3);
+    }
   }
-  h1 { font-size: 1.5rem; }
-  .box {
-    background: #f6f6f8;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    padding: 20px;
-    margin: 24px 0;
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
   }
-  code {
-    display: block;
-    background: #eee;
-    padding: 10px 12px;
-    border-radius: 6px;
-    word-break: break-all;
-    font-size: 0.9rem;
-    margin: 10px 0;
+  .wrap { max-width: 880px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  header.top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
   }
+  .title-block h1 { font-size: 1.4rem; margin: 0 0 4px; }
   .badge {
     display: inline-block;
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     padding: 2px 8px;
     border-radius: 999px;
-    background: #a70638;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .lead { color: var(--text-muted); font-size: 0.92rem; max-width: 46em; }
+
+  button { font: inherit; cursor: pointer; }
+  .btn {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    padding: 9px 14px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--surface-2); }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-contrast);
+    font-weight: 600;
+  }
+
+  .subscribe-box {
+    display: none;
+    margin-top: 10px;
+    padding: 16px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+  }
+  .subscribe-box.open { display: block; }
+  .subscribe-box code {
+    display: block;
+    background: var(--surface-2);
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    word-break: break-all;
+    margin: 8px 0 10px;
+  }
+  .sub-method { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .sub-method:first-of-type { margin-top: 12px; }
+  .sub-method h4 { margin: 0 0 4px; font-size: 0.86rem; }
+  .sub-method p { margin: 0; font-size: 0.82rem; color: var(--text-muted); line-height: 1.6; }
+  .sub-method .tip { font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; }
+
+  .search { margin: 18px 0; }
+  .search input {
+    width: 100%;
+    padding: 11px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.95rem;
+  }
+  .search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  section.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 16px;
+    margin-bottom: 18px;
+  }
+  section.panel h2 { font-size: 1rem; margin: 0 0 12px; }
+
+  .event-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .event-list li {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 9px 6px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .event-list li:hover { background: var(--surface-2); }
+  .event-list .date { flex: 0 0 auto; font-size: 0.8rem; color: var(--text-muted); min-width: 7.5em; }
+  .event-list .subject { flex: 1 1 auto; font-size: 0.92rem; }
+  .tag {
+    flex: 0 0 auto;
+    font-size: 0.72rem;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-weight: 600;
     color: #fff;
   }
-  footer { margin-top: 40px; font-size: 0.85rem; opacity: 0.7; }
+  .tag.academic { background: var(--type-academic); }
+  .tag.event { background: var(--type-event); }
+  .empty-msg, .status-msg { color: var(--text-muted); font-size: 0.88rem; padding: 8px 6px; }
+  .status-msg { text-align: center; padding: 30px 10px; }
+
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .cal-head .month-label { font-size: 1.05rem; font-weight: 700; min-width: 8em; text-align: center; }
+  .cal-nav { display: flex; gap: 6px; align-items: center; }
+  .cal-nav button { width: 34px; height: 34px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+
+  .weekday-row, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .weekday-row div { text-align: center; font-size: 0.76rem; color: var(--text-muted); padding-bottom: 6px; font-weight: 600; }
+  .weekday-row div.sun { color: var(--sun); }
+  .weekday-row div.sat { color: var(--sat); }
+
+  .day-cell {
+    min-height: 68px;
+    border-radius: 8px;
+    padding: 5px 5px 4px;
+    background: var(--surface-2);
+    border: 2px solid transparent;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+  }
+  .day-cell.empty { background: transparent; }
+  .day-cell.has-events { cursor: pointer; }
+  .day-cell.has-events:hover { border-color: var(--accent); }
+  .day-cell.today { border-color: var(--today-ring); }
+  .day-num { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); }
+  .day-cell.sun .day-num { color: var(--sun); }
+  .day-cell.sat .day-num { color: var(--sat); }
+  .day-cell.today .day-num { color: var(--today-ring); }
+  .chip {
+    font-size: 0.66rem;
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chip.academic { background: var(--type-academic); }
+  .chip.event { background: var(--type-event); }
+  .more-chip { font-size: 0.64rem; color: var(--text-muted); }
+
+  .legend { display: flex; gap: 16px; margin-top: 12px; font-size: 0.8rem; color: var(--text-muted); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .legend i.academic { background: var(--type-academic); }
+  .legend i.event { background: var(--type-event); }
+
+  dialog#day-modal {
+    border: none;
+    border-radius: 14px;
+    padding: 0;
+    max-width: 420px;
+    width: 90vw;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  }
+  dialog#day-modal::backdrop { background: rgba(0,0,0,0.5); }
+  .modal-inner { padding: 20px; position: relative; }
+  .modal-inner h3 { margin: 0 0 12px; font-size: 1.05rem; padding-right: 20px; }
+  .modal-close { position: absolute; top: 14px; right: 14px; background: none; border: none; font-size: 1.2rem; color: var(--text-muted); line-height: 1; }
+  .modal-event { padding: 10px 0; border-top: 1px solid var(--border); }
+  .modal-event:first-of-type { border-top: none; padding-top: 0; }
+  .modal-event .subject { font-size: 0.95rem; margin: 6px 0 4px; }
+  .modal-event .meta { font-size: 0.78rem; color: var(--text-muted); }
+
+  footer.foot { margin-top: 30px; font-size: 0.8rem; color: var(--text-muted); line-height: 1.7; }
+  footer.foot a { color: inherit; }
+
+  @media (max-width: 480px) {
+    .day-cell { min-height: 54px; }
+    .chip { display: none; }
+    .more-chip { display: none; }
+    .day-cell.has-events { align-items: center; }
+    .day-cell.has-events::after {
+      content: "";
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--accent);
+      margin-top: 2px;
+    }
+  }
 </style>
 </head>
 <body>
-  <span class="badge">비공식 · 학생 제작</span>
-  <h1>고려사이버대학교 학사일정 캘린더 구독</h1>
-  <p>
-    학교 홈페이지에 공개된 학사일정을 매일 자동으로 가져와
-    구글 캘린더 · 애플 캘린더 · 아웃룩에서 바로 구독할 수 있는
-    표준 iCalendar(.ics) 피드로 제공합니다. 한 번만 등록하면
-    이후 일정이 바뀌어도 자동으로 반영됩니다.
-  </p>
+<div class="wrap">
+  <header class="top">
+    <div class="title-block">
+      <span class="badge">비공식 · 학생 제작</span>
+      <h1>고려사이버대학교 학사일정</h1>
+      <p class="lead">학교 홈페이지 학사일정을 매일 자동으로 가져와 더 보기 편하게 정리했습니다. 캘린더 앱에 구독해두면 일정이 바뀔 때마다 자동으로 반영됩니다.</p>
+    </div>
+    <div>
+      <button class="btn primary" id="subscribe-toggle">📅 캘린더 구독하기</button>
+    </div>
+  </header>
 
-  <div class="box">
+  <div class="subscribe-box" id="subscribe-box">
     <strong>구독 URL</strong>
     <code id="ics-url">https://kcu-hub.github.io/kcu-schedule/kcu-schedule.ics</code>
+    <button class="btn" id="copy-btn">URL 복사</button>
+
+    <div class="sub-method">
+      <h4>가장 확실한 방법 (안드로이드 포함 모든 기기)</h4>
+      <p>PC 브라우저에서 calendar.google.com 접속 → 왼쪽 "다른 캘린더" 옆 + 버튼 → "URL로 추가" → 위 URL 붙여넣기.</p>
+      <p class="tip">안드로이드 구글 캘린더 앱에는 URL 추가 기능이 없어서, 이렇게 웹에서 한 번 추가해두면 같은 구글 계정으로 로그인된 폰 앱에 자동으로 동기화됩니다.</p>
+    </div>
+    <div class="sub-method">
+      <h4>아이폰 · 아이패드 · 맥 (Apple 캘린더)</h4>
+      <p>설정 앱 → 캘린더 → 계정 → 계정 추가 → 기타 → 구독 캘린더 추가 → 위 URL 입력.
+      (Mac은 캘린더 앱 → 파일 → 새로운 캘린더 구독)</p>
+    </div>
+    <div class="sub-method">
+      <h4>윈도우 · 아웃룩</h4>
+      <p>Outlook(웹 또는 앱) → 캘린더 추가 → "인터넷에서 구독" → 위 URL 입력.</p>
+    </div>
   </div>
 
-  <h2>등록 방법</h2>
-  <ul>
-    <li><strong>구글 캘린더</strong>: 설정 → 캘린더 추가 → URL로 추가 → 위 주소 붙여넣기</li>
-    <li><strong>애플 캘린더(iPhone/Mac)</strong>: 설정(또는 파일) → 캘린더 구독 → 위 주소 붙여넣기</li>
-    <li><strong>아웃룩</strong>: 캘린더 추가 → 인터넷에서 구독 → 위 주소 붙여넣기</li>
-  </ul>
+  <div class="search">
+    <input type="text" id="search-input" placeholder="일정 검색 (예: 수강신청, 졸업, 휴학, 장학금)" autocomplete="off">
+  </div>
 
-  <h2>안내</h2>
-  <p>
-    이 페이지는 재학생이 개인적으로 만든 비공식 도구이며 고려사이버대학교와
-    관계가 없습니다. 데이터는 학교 홈페이지 학사일정 페이지가 사용하는
-    공개 정보를 그대로 옮긴 것이며, 실제 학사일정은 항상 학교 공식
-    홈페이지가 기준입니다.
-  </p>
+  <section class="panel">
+    <h2 id="list-title">다가오는 일정</h2>
+    <ul class="event-list" id="event-list"></ul>
+  </section>
 
-  <footer>매일 1회 자동 갱신 · 소스: cuk.edu 학사일정</footer>
+  <section class="panel" id="calendar-panel">
+    <div class="cal-head">
+      <div class="cal-nav">
+        <button class="btn" id="prev-month" aria-label="이전 달">‹</button>
+        <button class="btn" id="today-btn">오늘</button>
+      </div>
+      <div class="month-label" id="month-label"></div>
+      <div class="cal-nav">
+        <button class="btn" id="next-month" aria-label="다음 달">›</button>
+      </div>
+    </div>
+    <div class="weekday-row">
+      <div class="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="sat">토</div>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="legend">
+      <span><i class="academic"></i>학사</span>
+      <span><i class="event"></i>행사</span>
+    </div>
+  </section>
+
+  <footer class="foot">
+    이 페이지는 재학생이 개인적으로 만든 비공식 도구이며 고려사이버대학교와 관계가 없습니다.
+    실제 학사일정은 항상 <a href="https://www.cuk.edu/cms/FrCon/index.do?MENU_ID=590" target="_blank" rel="noopener">학교 공식 홈페이지</a>가 기준입니다.
+    데이터는 매일 자동 갱신됩니다 · <a href="https://github.com/KCU-Hub/kcu-schedule" target="_blank" rel="noopener">소스코드(GitHub)</a>
+  </footer>
+</div>
+
+<dialog id="day-modal">
+  <div class="modal-inner">
+    <button class="modal-close" id="modal-close" aria-label="닫기">✕</button>
+    <h3 id="modal-date"></h3>
+    <div id="modal-events"></div>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  'use strict';
+
+  const TYPE_CLASS = { R0201: 'academic', R0203: 'event' };
+  const state = { events: [], viewYear: null, viewMonth: null }; // viewMonth: 0-based
+
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const todayISO = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  };
+  const parseISO = (s) => {
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  };
+  const fmtISO = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  const fmtDateKR = (iso) => iso.split('-').join('.');
+  const fmtRangeKR = (ev) => ev.start === ev.end ? fmtDateKR(ev.start) : `${fmtDateKR(ev.start)} ~ ${fmtDateKR(ev.end)}`;
+  const fmtDateFull = (d) => {
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
+  };
+  const escapeHTML = (s) => {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  };
+  const eventsOn = (iso) => state.events.filter((e) => e.start <= iso && iso <= e.end);
+
+  function renderList(items, emptyText) {
+    const ul = document.getElementById('event-list');
+    ul.innerHTML = '';
+    if (!items.length) {
+      const li = document.createElement('li');
+      li.className = 'empty-msg';
+      li.textContent = emptyText;
+      ul.appendChild(li);
+      return;
+    }
+    items.forEach((ev) => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span class="date">${fmtRangeKR(ev)}</span>
+        <span class="subject">${escapeHTML(ev.subject)}</span>
+        <span class="tag ${TYPE_CLASS[ev.type] || 'academic'}">${escapeHTML(ev.type_label || ev.type)}</span>`;
+      li.addEventListener('click', () => goToDate(ev.start));
+      ul.appendChild(li);
+    });
+  }
+
+  function updateListView() {
+    const q = document.getElementById('search-input').value.trim();
+    const title = document.getElementById('list-title');
+    if (q) {
+      const matched = state.events
+        .filter((e) => e.subject.includes(q))
+        .sort((a, b) => (a.start < b.start ? -1 : 1));
+      title.textContent = `검색 결과 (${matched.length}건)`;
+      renderList(matched, '검색 결과가 없습니다.');
+    } else {
+      const today = todayISO();
+      const upcoming = state.events
+        .filter((e) => e.end >= today)
+        .sort((a, b) => (a.start < b.start ? -1 : 1))
+        .slice(0, 12);
+      title.textContent = '다가오는 일정';
+      renderList(upcoming, '예정된 일정이 없습니다.');
+    }
+  }
+
+  function renderCalendar() {
+    const y = state.viewYear, m = state.viewMonth;
+    document.getElementById('month-label').textContent = `${y}년 ${m + 1}월`;
+
+    const firstWeekday = new Date(y, m, 1).getDay();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const today = todayISO();
+
+    const grid = document.getElementById('cal-grid');
+    grid.innerHTML = '';
+
+    for (let i = 0; i < firstWeekday; i++) {
+      const blank = document.createElement('div');
+      blank.className = 'day-cell empty';
+      grid.appendChild(blank);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const cellDate = new Date(y, m, d);
+      const iso = fmtISO(cellDate);
+      const dow = cellDate.getDay();
+      const dayEvents = eventsOn(iso);
+
+      const cell = document.createElement('div');
+      cell.className = [
+        'day-cell',
+        dow === 0 ? 'sun' : '',
+        dow === 6 ? 'sat' : '',
+        iso === today ? 'today' : '',
+        dayEvents.length ? 'has-events' : '',
+      ].filter(Boolean).join(' ');
+
+      const num = document.createElement('div');
+      num.className = 'day-num';
+      num.textContent = String(d);
+      cell.appendChild(num);
+
+      dayEvents.slice(0, 2).forEach((ev) => {
+        const chip = document.createElement('div');
+        chip.className = `chip ${TYPE_CLASS[ev.type] || 'academic'}`;
+        chip.textContent = ev.subject;
+        cell.appendChild(chip);
+      });
+      if (dayEvents.length > 2) {
+        const more = document.createElement('div');
+        more.className = 'more-chip';
+        more.textContent = `+${dayEvents.length - 2}개 더`;
+        cell.appendChild(more);
+      }
+
+      if (dayEvents.length) {
+        cell.tabIndex = 0;
+        cell.setAttribute('role', 'button');
+        cell.setAttribute('aria-label', `${d}일, 일정 ${dayEvents.length}건`);
+        const openThis = () => openDayModal(iso, dayEvents);
+        cell.addEventListener('click', openThis);
+        cell.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openThis(); }
+        });
+      }
+
+      grid.appendChild(cell);
+    }
+  }
+
+  function openDayModal(iso, dayEvents) {
+    const modal = document.getElementById('day-modal');
+    document.getElementById('modal-date').textContent = fmtDateFull(parseISO(iso));
+    const container = document.getElementById('modal-events');
+    container.innerHTML = '';
+    dayEvents.forEach((ev) => {
+      const div = document.createElement('div');
+      div.className = 'modal-event';
+      div.innerHTML = `
+        <span class="tag ${TYPE_CLASS[ev.type] || 'academic'}">${escapeHTML(ev.type_label || ev.type)}</span>
+        <div class="subject">${escapeHTML(ev.subject)}</div>
+        <div class="meta">${fmtRangeKR(ev)}${ev.dept ? ' · ' + escapeHTML(ev.dept) : ''}</div>`;
+      container.appendChild(div);
+    });
+    if (typeof modal.showModal === 'function') modal.showModal();
+  }
+
+  function goToDate(iso) {
+    const d = parseISO(iso);
+    state.viewYear = d.getFullYear();
+    state.viewMonth = d.getMonth();
+    renderCalendar();
+    const dayEvents = eventsOn(iso);
+    document.getElementById('calendar-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (dayEvents.length) openDayModal(iso, dayEvents);
+  }
+
+  function initCalendarNav() {
+    document.getElementById('prev-month').addEventListener('click', () => {
+      state.viewMonth--;
+      if (state.viewMonth < 0) { state.viewMonth = 11; state.viewYear--; }
+      renderCalendar();
+    });
+    document.getElementById('next-month').addEventListener('click', () => {
+      state.viewMonth++;
+      if (state.viewMonth > 11) { state.viewMonth = 0; state.viewYear++; }
+      renderCalendar();
+    });
+    document.getElementById('today-btn').addEventListener('click', () => {
+      const d = new Date();
+      state.viewYear = d.getFullYear();
+      state.viewMonth = d.getMonth();
+      renderCalendar();
+    });
+    document.getElementById('modal-close').addEventListener('click', () => {
+      document.getElementById('day-modal').close();
+    });
+    document.getElementById('day-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'day-modal') e.target.close();
+    });
+  }
+
+  function initSubscribeBox() {
+    const box = document.getElementById('subscribe-box');
+    document.getElementById('subscribe-toggle').addEventListener('click', () => {
+      box.classList.toggle('open');
+    });
+    document.getElementById('copy-btn').addEventListener('click', () => {
+      const url = document.getElementById('ics-url').textContent;
+      navigator.clipboard.writeText(url).then(() => {
+        const btn = document.getElementById('copy-btn');
+        const original = btn.textContent;
+        btn.textContent = '복사됨!';
+        setTimeout(() => { btn.textContent = original; }, 1500);
+      });
+    });
+  }
+
+  async function init() {
+    initCalendarNav();
+    initSubscribeBox();
+    document.getElementById('search-input').addEventListener('input', updateListView);
+
+    const now = new Date();
+    state.viewYear = now.getFullYear();
+    state.viewMonth = now.getMonth();
+
+    try {
+      const res = await fetch('kcu-schedule.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      state.events = data.events || [];
+    } catch (err) {
+      document.getElementById('event-list').innerHTML =
+        '<li class="status-msg">일정을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</li>';
+      console.error(err);
+      renderCalendar();
+      return;
+    }
+
+    updateListView();
+    renderCalendar();
+  }
+
+  init();
+})();
+</script>
 </body>
 </html>
