@@ -10,9 +10,9 @@
 
 ## 구독 방법
 
-1. 구독 URL을 복사합니다. (`docs/index.html` 참고 — 배포 후 확정)
+1. 구독 URL을 복사합니다.
    ```
-   https://<username>.github.io/<repo>/kcu-schedule.ics
+   https://kcu-hub.github.io/kcu-schedule/kcu-schedule.ics
    ```
 2. 구글 캘린더: 설정 → 캘린더 추가 → URL로 추가
    애플 캘린더: 파일(또는 설정) → 캘린더 구독
@@ -29,8 +29,8 @@
 
 GitHub Actions(`.github/workflows/update-calendar.yml`)가 매일 1회
 (KST 06:00) 최신 데이터를 조회해 `docs/kcu-schedule.ics`를 갱신하고
-변경이 있을 때만 커밋합니다. GitHub Pages를 `main` 브랜치의 `/docs`
-폴더로 설정하면 위 구독 URL이 그대로 동작합니다.
+변경이 있을 때만 커밋합니다. GitHub Pages가 `main` 브랜치의 `/docs`
+폴더로 설정되어 있어 위 구독 URL이 그대로 동작합니다.
 
 ## 로컬 실행
 
