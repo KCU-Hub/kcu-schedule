@@ -1,0 +1,47 @@
+name: Update KCU academic calendar
+
+on:
+  schedule:
+    - cron: '0 21 * * *'  # 매일 06:00 KST (UTC 21:00)
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - 'fetch_schedule.py'
+      - 'requirements.txt'
+      - '.github/workflows/update-calendar.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-calendar
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Fetch schedule and build ICS
+        run: python fetch_schedule.py
+
+      - name: Commit and push if changed
+        run: |
+          if git diff --quiet -- docs/kcu-schedule.ics; then
+            echo "변경 없음"
+            exit 0
+          fi
+          git config user.name "heznpc"
+          git config user.email "heznpc@users.noreply.github.com"
+          git add docs/kcu-schedule.ics
+          git commit -m "chore: update KCU academic calendar"
+          git push

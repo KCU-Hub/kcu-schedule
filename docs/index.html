@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KCU 학사일정 캘린더 구독</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    max-width: 640px;
+    margin: 60px auto;
+    padding: 0 20px;
+    line-height: 1.6;
+    color: #1a1a1a;
+    background: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { color: #e8e8e8; background: #14141a; }
+    .box { background: #1f1f28 !important; border-color: #333 !important; }
+    code { background: #2a2a35 !important; }
+    a { color: #7dc4ff; }
+  }
+  h1 { font-size: 1.5rem; }
+  .box {
+    background: #f6f6f8;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 24px 0;
+  }
+  code {
+    display: block;
+    background: #eee;
+    padding: 10px 12px;
+    border-radius: 6px;
+    word-break: break-all;
+    font-size: 0.9rem;
+    margin: 10px 0;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 0.8rem;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #a70638;
+    color: #fff;
+  }
+  footer { margin-top: 40px; font-size: 0.85rem; opacity: 0.7; }
+</style>
+</head>
+<body>
+  <span class="badge">비공식 · 학생 제작</span>
+  <h1>고려사이버대학교 학사일정 캘린더 구독</h1>
+  <p>
+    학교 홈페이지에 공개된 학사일정을 매일 자동으로 가져와
+    구글 캘린더 · 애플 캘린더 · 아웃룩에서 바로 구독할 수 있는
+    표준 iCalendar(.ics) 피드로 제공합니다. 한 번만 등록하면
+    이후 일정이 바뀌어도 자동으로 반영됩니다.
+  </p>
+
+  <div class="box">
+    <strong>구독 URL</strong>
+    <code id="ics-url">https://REPLACE_ME.github.io/REPLACE_ME/kcu-schedule.ics</code>
+  </div>
+
+  <h2>등록 방법</h2>
+  <ul>
+    <li><strong>구글 캘린더</strong>: 설정 → 캘린더 추가 → URL로 추가 → 위 주소 붙여넣기</li>
+    <li><strong>애플 캘린더(iPhone/Mac)</strong>: 설정(또는 파일) → 캘린더 구독 → 위 주소 붙여넣기</li>
+    <li><strong>아웃룩</strong>: 캘린더 추가 → 인터넷에서 구독 → 위 주소 붙여넣기</li>
+  </ul>
+
+  <h2>안내</h2>
+  <p>
+    이 페이지는 재학생이 개인적으로 만든 비공식 도구이며 고려사이버대학교와
+    관계가 없습니다. 데이터는 학교 홈페이지 학사일정 페이지가 사용하는
+    공개 정보를 그대로 옮긴 것이며, 실제 학사일정은 항상 학교 공식
+    홈페이지가 기준입니다.
+  </p>
+
+  <footer>매일 1회 자동 갱신 · 소스: cuk.edu 학사일정</footer>
+</body>
+</html>
