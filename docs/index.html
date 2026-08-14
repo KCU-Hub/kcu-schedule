@@ -14,13 +14,15 @@
     --border: #e2e2e7;
     --text: #1a1a1e;
     --text-muted: #6b6b74;
+    /* 학교 상징색(버건디)을 기준으로 잡고, 행사는 보색이 아니라
+       버건디와 어울리는 골드로 둔다. 색은 이 두 가지 + 주말 표기까지만 쓴다. */
     --accent: #a70638;
     --accent-contrast: #ffffff;
     --today-bg: #fdeef2;
-    --type-academic: #2f5fd6;
-    --type-event: #c8622f;
-    --sun: #d0405a;
-    --sat: #3767c9;
+    --type-academic: #a70638;
+    --type-event: #96701a;
+    --sun: #b8394c;
+    --sat: #5b7699;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -30,13 +32,15 @@
       --border: #33333d;
       --text: #eceef2;
       --text-muted: #9b9ba5;
-      --accent: #ff5f86;
-      --accent-contrast: #1a1a1e;
+      /* 버건디는 어두운 배경에서 읽히도록 밝기를 올리되, 채도를 낮춰
+         형광 핑크로 튀지 않게 한다. 색 역할은 라이트 모드와 동일하게 유지. */
+      --accent: #cd6178;
+      --accent-contrast: #17070c;
       --today-bg: #3a1c26;
-      --type-academic: #7fa4ff;
-      --type-event: #ffa06a;
-      --sun: #ff7d95;
-      --sat: #7ea6ff;
+      --type-academic: #cd6178;
+      --type-event: #c4a057;
+      --sun: #d97f8c;
+      --sat: #8ba4c4;
     }
   }
   * { box-sizing: border-box; }
@@ -405,6 +409,10 @@
     const days = ['일', '월', '화', '수', '목', '금', '토'];
     return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
   };
+  // 셀 안에서는 폭이 좁아 앞부분만 보이는데, 거의 모든 일정이 "2026학년도"·"2026년"으로
+  // 시작해 그대로 두면 전부 똑같이 잘려 구분이 안 된다. 연도는 달력이 이미 알려주므로 뗀다.
+  const shortLabel = (subject) => subject.replace(/^\s*\d{4}\s*(학년도|년)\s*/, '');
+
   const escapeHTML = (s) => {
     const div = document.createElement('div');
     div.textContent = s;
@@ -502,7 +510,8 @@
       dayEvents.slice(0, 2).forEach((ev) => {
         const chip = document.createElement('div');
         chip.className = `chip ${TYPE_CLASS[ev.type] || 'academic'}`;
-        chip.textContent = ev.subject;
+        chip.textContent = shortLabel(ev.subject);
+        chip.title = ev.subject;
         cell.appendChild(chip);
       });
       if (dayEvents.length > 2) {
