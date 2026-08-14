@@ -21,7 +21,6 @@
     --type-event: #c8622f;
     --sun: #d0405a;
     --sat: #3767c9;
-    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -38,7 +37,6 @@
       --type-event: #ffa06a;
       --sun: #ff7d95;
       --sat: #7ea6ff;
-      --shadow: 0 1px 3px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3);
     }
   }
   * { box-sizing: border-box; }
@@ -49,7 +47,7 @@
     color: var(--text);
     -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 20px 16px 60px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 20px 16px 60px; }
 
   header.top {
     display: flex;
@@ -61,18 +59,19 @@
     padding-bottom: 18px;
     border-bottom: 2px solid var(--accent);
   }
-  .title-block h1 { font-size: 1.65rem; letter-spacing: -0.02em; margin: 0 0 6px; }
+  .title-block h1 { font-size: 1.85rem; font-weight: 800; letter-spacing: -0.03em; margin: 0 0 6px; }
   .badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: 0.72rem;
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: var(--accent);
-    color: var(--accent-contrast);
-    font-weight: 600;
-    letter-spacing: 0.02em;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
     margin-bottom: 10px;
   }
+  .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
   .lead { color: var(--text-muted); font-size: 0.92rem; max-width: 46em; }
 
   button { font: inherit; cursor: pointer; }
@@ -93,62 +92,53 @@
     font-weight: 600;
   }
 
-  .subscribe-box {
-    display: none;
-    margin-top: 10px;
-    padding: 16px 18px;
-    background: linear-gradient(135deg, var(--surface-2), var(--surface));
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    box-shadow: var(--shadow);
-  }
-  .subscribe-box.open { display: block; }
-  .subscribe-box code {
-    display: block;
-    background: var(--surface-2);
-    padding: 8px 10px;
-    border-radius: 6px;
-    font-size: 0.82rem;
-    word-break: break-all;
-    margin: 8px 0 10px;
-  }
-  .sub-method { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
-  .sub-method:first-of-type { margin-top: 12px; }
-  .sub-method h4 { margin: 0 0 4px; font-size: 0.86rem; }
-  .sub-method p { margin: 0; font-size: 0.82rem; color: var(--text-muted); line-height: 1.6; }
-  .sub-method .tip { font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; }
-
-  .search { margin: 18px 0; }
+  .search { margin: 20px 0 0; }
   .search input {
     width: 100%;
-    padding: 11px 14px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: var(--surface);
+    padding: 10px 2px;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
     color: var(--text);
-    font-size: 0.95rem;
+    font-size: 1rem;
+    border-radius: 0;
   }
-  .search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .search input:focus { outline: none; border-bottom-color: var(--accent); }
 
-  section.panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-    padding: 16px;
-    margin-bottom: 18px;
+  .tabbar {
+    display: flex;
+    gap: 22px;
+    border-bottom: 1px solid var(--border);
+    margin-top: 18px;
   }
-  section.panel h2 { font-size: 1rem; margin: 0 0 12px; }
+  .tab {
+    appearance: none;
+    border: none;
+    background: none;
+    padding: 11px 2px;
+    margin-bottom: -1px;
+    font-size: 0.94rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    border-bottom: 2px solid transparent;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
 
-  .event-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .view { display: none; padding-top: 22px; }
+  .view.active { display: block; }
+  .view-status { font-size: 0.82rem; color: var(--text-muted); margin: 0 0 10px; }
+
+  .event-list { list-style: none; margin: 0; padding: 0; }
   .event-list li {
     display: flex;
     align-items: baseline;
     gap: 10px;
-    padding: 9px 6px;
-    border-radius: 8px;
+    padding: 11px 4px;
+    border-bottom: 1px solid var(--border);
     cursor: pointer;
   }
+  .event-list li:last-child { border-bottom: none; }
   .event-list li:hover { background: var(--surface-2); }
   .event-list .date { flex: 0 0 auto; font-size: 0.8rem; color: var(--text-muted); min-width: 7.5em; }
   .event-list .subject { flex: 1 1 auto; font-size: 0.92rem; }
@@ -162,11 +152,11 @@
   }
   .tag.academic { background: var(--type-academic); }
   .tag.event { background: var(--type-event); }
-  .empty-msg, .status-msg { color: var(--text-muted); font-size: 0.88rem; padding: 8px 6px; }
+  .empty-msg, .status-msg { color: var(--text-muted); font-size: 0.88rem; padding: 8px 4px; }
   .status-msg { text-align: center; padding: 30px 10px; }
 
-  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .cal-head .month-label { font-size: 1.05rem; font-weight: 700; min-width: 8em; text-align: center; }
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .cal-head .month-label { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; min-width: 8em; text-align: center; }
   .cal-nav { display: flex; gap: 6px; align-items: center; }
   .cal-nav button { width: 34px; height: 34px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
 
@@ -212,13 +202,13 @@
   .chip.event { background: var(--type-event); }
   .more-chip { font-size: 0.64rem; color: var(--text-muted); }
 
-  .legend { display: flex; gap: 16px; margin-top: 12px; font-size: 0.8rem; color: var(--text-muted); flex-wrap: wrap; }
+  .legend { display: flex; gap: 16px; margin-top: 14px; font-size: 0.8rem; color: var(--text-muted); flex-wrap: wrap; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
   .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
   .legend i.academic { background: var(--type-academic); }
   .legend i.event { background: var(--type-event); }
 
-  dialog#day-modal {
+  dialog {
     border: none;
     border-radius: 14px;
     padding: 0;
@@ -228,16 +218,31 @@
     color: var(--text);
     box-shadow: 0 8px 30px rgba(0,0,0,0.3);
   }
-  dialog#day-modal::backdrop { background: rgba(0,0,0,0.5); }
-  .modal-inner { padding: 20px; position: relative; }
-  .modal-inner h3 { margin: 0 0 12px; font-size: 1.05rem; padding-right: 20px; }
-  .modal-close { position: absolute; top: 14px; right: 14px; background: none; border: none; font-size: 1.2rem; color: var(--text-muted); line-height: 1; }
+  dialog::backdrop { background: rgba(0,0,0,0.5); }
+  dialog#subscribe-dialog { max-width: 480px; }
+  .modal-inner { padding: 22px; position: relative; max-height: 80vh; overflow-y: auto; }
+  .modal-inner h3 { margin: 0 0 12px; font-size: 1.1rem; padding-right: 20px; }
+  .modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 1.2rem; color: var(--text-muted); line-height: 1; }
   .modal-event { padding: 10px 0; border-top: 1px solid var(--border); }
   .modal-event:first-of-type { border-top: none; padding-top: 0; }
   .modal-event .subject { font-size: 0.95rem; margin: 6px 0 4px; }
   .modal-event .meta { font-size: 0.78rem; color: var(--text-muted); }
 
-  footer.foot { margin-top: 30px; font-size: 0.8rem; color: var(--text-muted); line-height: 1.7; }
+  .modal-inner code {
+    display: block;
+    background: var(--surface-2);
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    word-break: break-all;
+    margin: 10px 0;
+  }
+  .sub-method { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .sub-method h4 { margin: 0 0 4px; font-size: 0.86rem; }
+  .sub-method p { margin: 0; font-size: 0.82rem; color: var(--text-muted); line-height: 1.6; }
+  .sub-method .tip { font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; }
+
+  footer.foot { margin-top: 36px; font-size: 0.8rem; color: var(--text-muted); line-height: 1.7; }
   footer.foot a { color: inherit; }
 
   @media (max-width: 480px) {
@@ -251,6 +256,7 @@
       background: var(--accent);
       margin-top: 2px;
     }
+    .tabbar { gap: 16px; }
   }
 </style>
 </head>
@@ -267,32 +273,16 @@
     </div>
   </header>
 
-  <div class="subscribe-box" id="subscribe-box">
-    <strong>구독 URL</strong>
-    <code id="ics-url">https://kcu-hub.github.io/kcu-schedule/kcu-schedule.ics</code>
-    <button class="btn" id="copy-btn">URL 복사</button>
-
-    <div class="sub-method">
-      <h4>가장 확실한 방법 (안드로이드 포함 모든 기기)</h4>
-      <p>PC 브라우저에서 calendar.google.com 접속 → 왼쪽 "다른 캘린더" 옆 + 버튼 → "URL로 추가" → 위 URL 붙여넣기.</p>
-      <p class="tip">안드로이드 구글 캘린더 앱에는 URL 추가 기능이 없어서, 이렇게 웹에서 한 번 추가해두면 같은 구글 계정으로 로그인된 폰 앱에 자동으로 동기화됩니다.</p>
-    </div>
-    <div class="sub-method">
-      <h4>아이폰 · 아이패드 · 맥 (Apple 캘린더)</h4>
-      <p>설정 앱 → 캘린더 → 계정 → 계정 추가 → 기타 → 구독 캘린더 추가 → 위 URL 입력.
-      (Mac은 캘린더 앱 → 파일 → 새로운 캘린더 구독)</p>
-    </div>
-    <div class="sub-method">
-      <h4>윈도우 · 아웃룩</h4>
-      <p>Outlook(웹 또는 앱) → 캘린더 추가 → "인터넷에서 구독" → 위 URL 입력.</p>
-    </div>
-  </div>
-
   <div class="search">
     <input type="text" id="search-input" placeholder="일정 검색 (예: 수강신청, 졸업, 휴학, 장학금)" autocomplete="off">
   </div>
 
-  <section class="panel" id="calendar-panel">
+  <div class="tabbar" role="tablist">
+    <button class="tab active" id="tab-calendar" role="tab" aria-selected="true">캘린더</button>
+    <button class="tab" id="tab-list" role="tab" aria-selected="false">다가오는 일정</button>
+  </div>
+
+  <section class="view active" id="view-calendar" role="tabpanel">
     <div class="cal-head">
       <div class="cal-nav">
         <button class="btn" id="prev-month" aria-label="이전 달">‹</button>
@@ -313,8 +303,8 @@
     </div>
   </section>
 
-  <section class="panel">
-    <h2 id="list-title">다가오는 일정</h2>
+  <section class="view" id="view-list" role="tabpanel">
+    <p class="view-status" id="list-title">다가오는 일정</p>
     <ul class="event-list" id="event-list"></ul>
   </section>
 
@@ -333,12 +323,36 @@
   </div>
 </dialog>
 
+<dialog id="subscribe-dialog">
+  <div class="modal-inner">
+    <button class="modal-close" id="subscribe-close" aria-label="닫기">✕</button>
+    <h3>캘린더 구독</h3>
+    <code id="ics-url">https://kcu-hub.github.io/kcu-schedule/kcu-schedule.ics</code>
+    <button class="btn" id="copy-btn">URL 복사</button>
+
+    <div class="sub-method">
+      <h4>가장 확실한 방법 (안드로이드 포함 모든 기기)</h4>
+      <p>PC 브라우저에서 calendar.google.com 접속 → 왼쪽 "다른 캘린더" 옆 + 버튼 → "URL로 추가" → 위 URL 붙여넣기.</p>
+      <p class="tip">안드로이드 구글 캘린더 앱에는 URL 추가 기능이 없어서, 이렇게 웹에서 한 번 추가해두면 같은 구글 계정으로 로그인된 폰 앱에 자동으로 동기화됩니다.</p>
+    </div>
+    <div class="sub-method">
+      <h4>아이폰 · 아이패드 · 맥 (Apple 캘린더)</h4>
+      <p>설정 앱 → 캘린더 → 계정 → 계정 추가 → 기타 → 구독 캘린더 추가 → 위 URL 입력.
+      (Mac은 캘린더 앱 → 파일 → 새로운 캘린더 구독)</p>
+    </div>
+    <div class="sub-method">
+      <h4>윈도우 · 아웃룩</h4>
+      <p>Outlook(웹 또는 앱) → 캘린더 추가 → "인터넷에서 구독" → 위 URL 입력.</p>
+    </div>
+  </div>
+</dialog>
+
 <script>
 (function () {
   'use strict';
 
   const TYPE_CLASS = { R0201: 'academic', R0203: 'event' };
-  const state = { events: [], viewYear: null, viewMonth: null }; // viewMonth: 0-based
+  const state = { events: [], viewYear: null, viewMonth: null, activeTab: 'calendar' }; // viewMonth: 0-based
 
   const pad2 = (n) => String(n).padStart(2, '0');
   const todayISO = () => {
@@ -362,6 +376,16 @@
     return div.innerHTML;
   };
   const eventsOn = (iso) => state.events.filter((e) => e.start <= iso && iso <= e.end);
+
+  function switchTab(name) {
+    state.activeTab = name;
+    document.getElementById('tab-calendar').classList.toggle('active', name === 'calendar');
+    document.getElementById('tab-calendar').setAttribute('aria-selected', String(name === 'calendar'));
+    document.getElementById('tab-list').classList.toggle('active', name === 'list');
+    document.getElementById('tab-list').setAttribute('aria-selected', String(name === 'list'));
+    document.getElementById('view-calendar').classList.toggle('active', name === 'calendar');
+    document.getElementById('view-list').classList.toggle('active', name === 'list');
+  }
 
   function renderList(items, emptyText) {
     const ul = document.getElementById('event-list');
@@ -397,9 +421,8 @@
       const today = todayISO();
       const upcoming = state.events
         .filter((e) => e.end >= today)
-        .sort((a, b) => (a.start < b.start ? -1 : 1))
-        .slice(0, 12);
-      title.textContent = '다가오는 일정';
+        .sort((a, b) => (a.start < b.start ? -1 : 1));
+      title.textContent = `다가오는 일정 (${upcoming.length}건)`;
       renderList(upcoming, '예정된 일정이 없습니다.');
     }
   }
@@ -490,10 +513,15 @@
     const d = parseISO(iso);
     state.viewYear = d.getFullYear();
     state.viewMonth = d.getMonth();
+    switchTab('calendar');
     renderCalendar();
     const dayEvents = eventsOn(iso);
-    document.getElementById('calendar-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
     if (dayEvents.length) openDayModal(iso, dayEvents);
+  }
+
+  function initTabs() {
+    document.getElementById('tab-calendar').addEventListener('click', () => switchTab('calendar'));
+    document.getElementById('tab-list').addEventListener('click', () => switchTab('list'));
   }
 
   function initCalendarNav() {
@@ -521,10 +549,14 @@
     });
   }
 
-  function initSubscribeBox() {
-    const box = document.getElementById('subscribe-box');
+  function initSubscribeDialog() {
+    const dialog = document.getElementById('subscribe-dialog');
     document.getElementById('subscribe-toggle').addEventListener('click', () => {
-      box.classList.toggle('open');
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+    });
+    document.getElementById('subscribe-close').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', (e) => {
+      if (e.target.id === 'subscribe-dialog') dialog.close();
     });
     document.getElementById('copy-btn').addEventListener('click', () => {
       const url = document.getElementById('ics-url').textContent;
@@ -538,9 +570,13 @@
   }
 
   async function init() {
+    initTabs();
     initCalendarNav();
-    initSubscribeBox();
-    document.getElementById('search-input').addEventListener('input', updateListView);
+    initSubscribeDialog();
+    document.getElementById('search-input').addEventListener('input', () => {
+      updateListView();
+      if (document.getElementById('search-input').value.trim()) switchTab('list');
+    });
 
     const now = new Date();
     state.viewYear = now.getFullYear();
