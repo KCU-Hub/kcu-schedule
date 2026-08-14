@@ -146,66 +146,94 @@
   .tag {
     flex: 0 0 auto;
     font-size: 0.72rem;
-    padding: 2px 7px;
-    border-radius: 999px;
     font-weight: 600;
-    color: #fff;
+    color: var(--type-academic);
   }
-  .tag.academic { background: var(--type-academic); }
-  .tag.event { background: var(--type-event); }
+  .tag.event { color: var(--type-event); }
   .empty-msg, .status-msg { color: var(--text-muted); font-size: 0.88rem; padding: 8px 4px; }
   .status-msg { text-align: center; padding: 30px 10px; }
 
-  .cal-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .cal-head .month-label { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; text-align: center; }
-  .cal-nav { display: flex; gap: 6px; align-items: center; }
-  .cal-nav button { width: 34px; height: 34px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+  .cal-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+  .cal-head .month-label { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.035em; }
+  .cal-nav { display: flex; gap: 2px; align-items: center; }
+  .cal-nav .btn {
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+  }
+  .cal-nav .btn:hover { background: var(--surface-2); color: var(--text); }
 
-  .weekday-row, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-  .weekday-row div { text-align: center; font-size: 0.76rem; color: var(--text-muted); padding-bottom: 6px; font-weight: 600; }
+  .weekday-row, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .weekday-row div {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    padding-bottom: 9px;
+  }
   .weekday-row div.sun { color: var(--sun); }
   .weekday-row div.sat { color: var(--sat); }
+  .cal-grid { border-top: 1px solid var(--border); }
 
+  /* 셀 배경·둥근모서리·간격 없이 얇은 실선만으로 격자를 만든다 */
   .day-cell {
-    min-height: 68px;
-    border-radius: 8px;
-    padding: 5px 5px 4px;
-    background: var(--surface-2);
-    border: 2px solid transparent;
+    min-height: 96px;
+    padding: 7px 5px 9px;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    align-items: stretch;
+    gap: 3px;
     overflow: hidden;
   }
-  .day-cell.empty { background: transparent; }
   .day-cell.has-events { cursor: pointer; }
-  .day-cell.has-events:hover { border-color: var(--accent); }
-  .day-cell.today { background: var(--today-bg); }
+  .day-cell.has-events:hover { background: var(--surface-2); }
   .day-num {
-    width: 20px; height: 20px;
+    align-self: center;
+    width: 26px; height: 26px;
     display: flex; align-items: center; justify-content: center;
     border-radius: 50%;
-    font-size: 0.78rem; font-weight: 600; color: var(--text-muted);
+    margin-bottom: 2px;
+    font-size: 0.82rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
   }
   .day-cell.sun .day-num { color: var(--sun); }
   .day-cell.sat .day-num { color: var(--sat); }
-  .day-cell.today .day-num { background: var(--accent); color: var(--accent-contrast); font-weight: 700; }
+  .day-cell.today .day-num { background: var(--accent); color: var(--accent-contrast); font-weight: 600; }
+
+  /* 색 알약 대신 작은 점 + 일반 텍스트 */
   .chip {
-    font-size: 0.66rem;
-    padding: 1px 5px;
-    border-radius: 4px;
-    color: #fff;
+    position: relative;
+    padding-left: 11px;
+    font-size: 0.69rem;
+    line-height: 1.45;
+    color: var(--text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .chip.academic { background: var(--type-academic); }
-  .chip.event { background: var(--type-event); }
-  .more-chip { font-size: 0.64rem; color: var(--text-muted); }
+  .chip::before {
+    content: "";
+    position: absolute;
+    left: 2px; top: 0.5em;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+  }
+  .chip.academic::before { background: var(--type-academic); }
+  .chip.event::before { background: var(--type-event); }
+  .more-chip { padding-left: 11px; font-size: 0.66rem; color: var(--text-muted); }
 
-  .legend { display: flex; gap: 16px; margin-top: 14px; font-size: 0.8rem; color: var(--text-muted); flex-wrap: wrap; }
+  .legend { display: flex; gap: 16px; margin-top: 16px; font-size: 0.76rem; color: var(--text-muted); flex-wrap: wrap; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
-  .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .legend i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
   .legend i.academic { background: var(--type-academic); }
   .legend i.event { background: var(--type-event); }
 
@@ -247,15 +275,17 @@
   footer.foot a { color: inherit; }
 
   @media (max-width: 480px) {
-    .day-cell { min-height: 54px; }
+    /* 좁은 화면에서는 일정 이름 대신 점만 (iOS 캘린더 월 보기와 같은 방식) */
+    .cal-head .month-label { font-size: 1.4rem; }
+    .day-cell { min-height: 60px; padding: 6px 2px 8px; align-items: center; }
+    .day-num { width: 24px; height: 24px; margin-bottom: 0; font-size: 0.8rem; }
     .chip { display: none; }
     .more-chip { display: none; }
-    .day-cell.has-events { align-items: center; }
     .day-cell.has-events::after {
       content: "";
       width: 5px; height: 5px; border-radius: 50%;
       background: var(--accent);
-      margin-top: 2px;
+      margin-top: 3px;
     }
     .tabbar { gap: 16px; }
 
@@ -291,12 +321,10 @@
 
   <section class="view active" id="view-calendar" role="tabpanel">
     <div class="cal-head">
-      <div class="cal-nav">
-        <button class="btn" id="prev-month" aria-label="이전 달">‹</button>
-        <button class="btn" id="today-btn">오늘</button>
-      </div>
       <div class="month-label" id="month-label"></div>
       <div class="cal-nav">
+        <button class="btn" id="today-btn">오늘</button>
+        <button class="btn" id="prev-month" aria-label="이전 달">‹</button>
         <button class="btn" id="next-month" aria-label="다음 달">›</button>
       </div>
     </div>
