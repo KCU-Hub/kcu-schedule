@@ -2,7 +2,9 @@ name: Update KCU academic calendar
 
 on:
   schedule:
-    - cron: '0 21 * * *'  # 매일 06:00 KST (UTC 21:00)
+    # 학사일정은 연/학기 단위로 미리 확정 공고되므로 매일 조회할 이유가 없다.
+    # 학기 전환처럼 실제로 갱신되는 시점을 일주일 안에 잡는 정도면 충분하다.
+    - cron: '0 21 * * 0'  # 매주 월요일 06:00 KST (일요일 UTC 21:00)
   workflow_dispatch: {}
   push:
     branches: [main]

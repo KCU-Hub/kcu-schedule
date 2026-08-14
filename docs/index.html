@@ -132,8 +132,9 @@
   .event-list { list-style: none; margin: 0; padding: 0; }
   .event-list li {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: 10px;
+    gap: 4px 10px;
     padding: 11px 4px;
     border-bottom: 1px solid var(--border);
     cursor: pointer;
@@ -141,7 +142,7 @@
   .event-list li:last-child { border-bottom: none; }
   .event-list li:hover { background: var(--surface-2); }
   .event-list .date { flex: 0 0 auto; font-size: 0.8rem; color: var(--text-muted); min-width: 7.5em; }
-  .event-list .subject { flex: 1 1 auto; font-size: 0.92rem; }
+  .event-list .subject { flex: 1 1 160px; min-width: 0; font-size: 0.92rem; word-break: keep-all; overflow-wrap: break-word; }
   .tag {
     flex: 0 0 auto;
     font-size: 0.72rem;
@@ -155,8 +156,8 @@
   .empty-msg, .status-msg { color: var(--text-muted); font-size: 0.88rem; padding: 8px 4px; }
   .status-msg { text-align: center; padding: 30px 10px; }
 
-  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .cal-head .month-label { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; min-width: 8em; text-align: center; }
+  .cal-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .cal-head .month-label { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; text-align: center; }
   .cal-nav { display: flex; gap: 6px; align-items: center; }
   .cal-nav button { width: 34px; height: 34px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
 
@@ -257,6 +258,12 @@
       margin-top: 2px;
     }
     .tabbar { gap: 16px; }
+
+    /* 좁은 화면에서는 [날짜 ... 태그] / [제목] 두 줄로 나눈다 */
+    .event-list li { align-items: center; gap: 5px 8px; padding: 12px 4px; }
+    .event-list .date { order: 1; min-width: 0; }
+    .event-list .tag { order: 2; margin-left: auto; }
+    .event-list .subject { order: 3; flex: 1 1 100%; }
   }
 </style>
 </head>
@@ -266,7 +273,7 @@
     <div class="title-block">
       <span class="badge">비공식 · 학생 제작</span>
       <h1>고려사이버대학교 학사일정</h1>
-      <p class="lead">학교 홈페이지 학사일정을 매일 자동으로 가져와 더 보기 편하게 정리했습니다. 캘린더 앱에 구독해두면 일정이 바뀔 때마다 자동으로 반영됩니다.</p>
+      <p class="lead">학교 홈페이지 학사일정을 자동으로 가져와 더 보기 편하게 정리했습니다. 캘린더 앱에 구독해두면 일정이 바뀔 때마다 자동으로 반영됩니다.</p>
     </div>
     <div>
       <button class="btn primary" id="subscribe-toggle">📅 캘린더 구독하기</button>
@@ -311,7 +318,7 @@
   <footer class="foot">
     이 페이지는 재학생이 개인적으로 만든 비공식 도구이며 고려사이버대학교와 관계가 없습니다.
     실제 학사일정은 항상 <a href="https://www.cuk.edu/cms/FrCon/index.do?MENU_ID=590" target="_blank" rel="noopener">학교 공식 홈페이지</a>가 기준입니다.
-    데이터는 매일 자동 갱신됩니다 · <a href="https://github.com/KCU-Hub/kcu-schedule" target="_blank" rel="noopener">소스코드(GitHub)</a>
+    데이터는 매주 자동 갱신됩니다 · <a href="https://github.com/KCU-Hub/kcu-schedule" target="_blank" rel="noopener">소스코드(GitHub)</a>
   </footer>
 </div>
 
