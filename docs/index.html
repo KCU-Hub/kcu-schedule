@@ -16,7 +16,7 @@
     --text-muted: #6b6b74;
     --accent: #a70638;
     --accent-contrast: #ffffff;
-    --today-ring: #a70638;
+    --today-bg: #fdeef2;
     --type-academic: #2f5fd6;
     --type-event: #c8622f;
     --sun: #d0405a;
@@ -33,7 +33,7 @@
       --text-muted: #9b9ba5;
       --accent: #ff5f86;
       --accent-contrast: #1a1a1e;
-      --today-ring: #ff5f86;
+      --today-bg: #3a1c26;
       --type-academic: #7fa4ff;
       --type-event: #ffa06a;
       --sun: #ff7d95;
@@ -57,9 +57,11 @@
     justify-content: space-between;
     gap: 16px;
     flex-wrap: wrap;
-    margin-bottom: 6px;
+    margin-bottom: 22px;
+    padding-bottom: 18px;
+    border-bottom: 2px solid var(--accent);
   }
-  .title-block h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  .title-block h1 { font-size: 1.65rem; letter-spacing: -0.02em; margin: 0 0 6px; }
   .badge {
     display: inline-block;
     font-size: 0.72rem;
@@ -68,7 +70,8 @@
     background: var(--accent);
     color: var(--accent-contrast);
     font-weight: 600;
-    margin-bottom: 8px;
+    letter-spacing: 0.02em;
+    margin-bottom: 10px;
   }
   .lead { color: var(--text-muted); font-size: 0.92rem; max-width: 46em; }
 
@@ -94,7 +97,7 @@
     display: none;
     margin-top: 10px;
     padding: 16px 18px;
-    background: var(--surface);
+    background: linear-gradient(135deg, var(--surface-2), var(--surface));
     border: 1px solid var(--border);
     border-radius: 10px;
     box-shadow: var(--shadow);
@@ -186,11 +189,16 @@
   .day-cell.empty { background: transparent; }
   .day-cell.has-events { cursor: pointer; }
   .day-cell.has-events:hover { border-color: var(--accent); }
-  .day-cell.today { border-color: var(--today-ring); }
-  .day-num { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); }
+  .day-cell.today { background: var(--today-bg); }
+  .day-num {
+    width: 20px; height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    font-size: 0.78rem; font-weight: 600; color: var(--text-muted);
+  }
   .day-cell.sun .day-num { color: var(--sun); }
   .day-cell.sat .day-num { color: var(--sat); }
-  .day-cell.today .day-num { color: var(--today-ring); }
+  .day-cell.today .day-num { background: var(--accent); color: var(--accent-contrast); font-weight: 700; }
   .chip {
     font-size: 0.66rem;
     padding: 1px 5px;
