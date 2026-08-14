@@ -96,7 +96,8 @@
     font-weight: 600;
   }
 
-  .search { margin: 20px 0 0; }
+  .search { margin: 16px 0 0; }
+  .search[hidden] { display: none; }
   .search input {
     width: 100%;
     padding: 10px 2px;
@@ -111,10 +112,25 @@
 
   .tabbar {
     display: flex;
+    align-items: center;
     gap: 22px;
     border-bottom: 1px solid var(--border);
     margin-top: 18px;
   }
+  .icon-btn {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: var(--text-muted);
+  }
+  .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+  .icon-btn[aria-expanded="true"] { background: var(--surface-2); color: var(--accent); }
   .tab {
     appearance: none;
     border: none;
@@ -314,13 +330,18 @@
     </div>
   </header>
 
-  <div class="search">
-    <input type="text" id="search-input" placeholder="일정 검색 (예: 수강신청, 졸업, 휴학, 장학금)" autocomplete="off">
-  </div>
-
   <div class="tabbar" role="tablist">
     <button class="tab active" id="tab-calendar" role="tab" aria-selected="true">캘린더</button>
     <button class="tab" id="tab-list" role="tab" aria-selected="false">다가오는 일정</button>
+    <button class="icon-btn" id="search-toggle" aria-label="일정 검색" aria-expanded="false">
+      <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <circle cx="8.5" cy="8.5" r="5.5"/><path d="M12.5 12.5 17 17"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="search" id="search-box" hidden>
+    <input type="text" id="search-input" placeholder="일정 검색 (예: 수강신청, 졸업, 휴학, 장학금)" autocomplete="off">
   </div>
 
   <section class="view active" id="view-calendar" role="tabpanel">
@@ -613,14 +634,37 @@
     });
   }
 
+  function initSearch() {
+    const toggle = document.getElementById('search-toggle');
+    const box = document.getElementById('search-box');
+    const input = document.getElementById('search-input');
+
+    toggle.addEventListener('click', () => {
+      const opening = box.hidden;
+      box.hidden = !opening;
+      toggle.setAttribute('aria-expanded', String(opening));
+      if (opening) {
+        input.focus();
+      } else if (input.value) {
+        input.value = '';
+        updateListView();
+      }
+    });
+
+    input.addEventListener('input', () => {
+      updateListView();
+      if (input.value.trim()) switchTab('list');
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') toggle.click();
+    });
+  }
+
   async function init() {
     initTabs();
     initCalendarNav();
     initSubscribeDialog();
-    document.getElementById('search-input').addEventListener('input', () => {
-      updateListView();
-      if (document.getElementById('search-input').value.trim()) switchTab('list');
-    });
+    initSearch();
 
     const now = new Date();
     state.viewYear = now.getFullYear();
