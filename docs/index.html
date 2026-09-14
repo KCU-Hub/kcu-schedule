@@ -327,6 +327,7 @@
   .note-actions button:disabled { opacity:.5; cursor:default; }
   .note-status { font-size:12px; color:var(--text-muted); }
 </style>
+<link rel="stylesheet" href="features.css">
 </head>
 <body>
 <div class="wrap">
@@ -343,7 +344,8 @@
 
   <div class="tabbar" role="tablist">
     <button class="tab active" id="tab-calendar" role="tab" aria-selected="true">캘린더</button>
-    <button class="tab" id="tab-list" role="tab" aria-selected="false">다가오는 일정</button>
+    <button class="tab" id="tab-week" role="tab" aria-selected="false">주간</button>
+    <button class="tab" id="tab-list" role="tab" aria-selected="false">목록</button>
     <button class="icon-btn" id="search-toggle" aria-label="일정 검색" aria-expanded="false">
       <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
         <circle cx="8.5" cy="8.5" r="5.5"/><path d="M12.5 12.5 17 17"/>
@@ -355,6 +357,18 @@
     <input type="text" id="search-input" placeholder="일정 검색 (예: 수강신청, 졸업, 휴학, 장학금)" autocomplete="off">
   </div>
 
+  <div class="feature-toolbar">
+    <div class="scope-controls" aria-label="일정 범위"><button class="scope selected" data-scope="all" aria-pressed="true">전체</button><button class="scope" data-scope="saved" aria-pressed="false">저장한 일정 <span id="saved-count"></span></button><button class="scope" data-scope="personal" aria-pressed="false">개인 일정</button></div>
+    <button class="text-button" id="manage-open">내 일정 관리</button>
+  </div>
+  <div class="filter-controls">
+    <label>종류 <select id="category-filter"><option value="all">전체</option><option value="registration">신청·납부</option><option value="exam">시험</option><option value="holiday">휴일</option><option value="academic">학사</option><option value="notice">성적·공지</option><option value="personal">개인</option></select></label>
+    <label>내 분류 <select id="tag-filter"><option value="">전체</option></select></label>
+    <button class="text-button" id="reset-filters" hidden>초기화</button>
+    <button class="text-button" id="personal-add" data-needs-storage>＋ 개인 일정</button>
+  </div>
+  <p id="storage-status" class="note-help" role="status"></p>
+  <section class="view" id="view-week" role="tabpanel"><div class="cal-head"><div class="month-label" id="week-label"></div><div class="cal-nav"><button class="btn" id="week-today">오늘</button><button class="btn" id="week-prev" aria-label="이전 주">‹</button><button class="btn" id="week-next" aria-label="다음 주">›</button></div></div><div id="week-days"></div></section>
   <section class="view active" id="view-calendar" role="tabpanel">
     <div class="cal-head">
       <div class="month-label" id="month-label"></div>
@@ -375,6 +389,7 @@
   </section>
 
   <section class="view" id="view-list" role="tabpanel">
+    <label class="past-control"><input type="checkbox" id="include-past"> 지난 일정 포함</label>
     <p class="view-status" id="list-title">다가오는 일정</p>
     <ul class="event-list" id="event-list"></ul>
   </section>
@@ -386,6 +401,7 @@
   </footer>
 </div>
 
+<dialog id="feature-dialog" aria-labelledby="feature-title"><div class="modal-inner"><button class="modal-close" id="feature-close" aria-label="닫기">×</button><h3 id="feature-title"></h3><div id="feature-content"></div></div></dialog>
 <dialog id="day-modal">
   <div class="modal-inner">
     <button class="modal-close" id="modal-close" aria-label="닫기">✕</button>
@@ -418,375 +434,6 @@
   </div>
 </dialog>
 
-<script>
-(function () {
-  'use strict';
-
-  const TYPE_CLASS = { R0201: 'academic', R0203: 'event' };
-  const state = { events: [], viewYear: null, viewMonth: null, activeTab: 'calendar' }; // viewMonth: 0-based
-
-  let notesDB = null;
-  const notes = new Map();
-  const noteKey = ev => ev.uid || `${ev.start}|${ev.end}|${ev.subject}`;
-  async function loadNotes() {
-    try {
-      notesDB = await new Promise((resolve, reject) => {
-        const request = indexedDB.open('kcu-pages-notes', 1);
-        request.onupgradeneeded = () => request.result.createObjectStore('notes', { keyPath: 'id' });
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-        request.onblocked = () => reject(new Error('Storage blocked'));
-      });
-      notesDB.onversionchange = () => { notesDB.close(); notesDB = null; };
-      const records = await new Promise((resolve, reject) => {
-        const request = notesDB.transaction('notes').objectStore('notes').getAll();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
-      records.forEach(record => notes.set(record.id, record.content));
-    } catch { notesDB = null; }
-  }
-  function writeNote(id, content) {
-    return new Promise((resolve, reject) => {
-      if (!notesDB) { reject(new Error('Storage unavailable')); return; }
-      const tx = notesDB.transaction('notes', 'readwrite');
-      const store = tx.objectStore('notes');
-      if (content) store.put({ id, content, updatedAt: new Date().toISOString() });
-      else store.delete(id);
-      tx.oncomplete = () => { if (content) notes.set(id, content); else notes.delete(id); resolve(); };
-      tx.onabort = tx.onerror = () => reject(tx.error);
-    });
-  }
-  function attachNoteEditor(container, ev) {
-    const id = noteKey(ev);
-    const editor = document.createElement('div');
-    editor.className = 'note-editor';
-    const label = document.createElement('label');
-    const input = document.createElement('textarea');
-    input.id = `event-note-${document.querySelectorAll('.note-editor').length}`;
-    label.htmlFor = input.id;
-    label.textContent = '내 메모';
-    input.value = notes.get(id) || '';
-    input.maxLength = 5000;
-    input.placeholder = '준비할 것, 제출할 서류 등을 적어두세요.';
-    const help = document.createElement('p');
-    help.className = 'note-help';
-    help.textContent = '이 기기의 브라우저에만 저장됩니다. 다른 기기와 동기화되지 않으며, 브라우저 데이터를 지우면 삭제됩니다.';
-    const actions = document.createElement('div');
-    actions.className = 'note-actions';
-    const save = document.createElement('button');
-    save.type = 'button'; save.className = 'note-save'; save.textContent = '메모 저장';
-    const remove = document.createElement('button');
-    remove.type = 'button'; remove.textContent = '삭제';
-    const status = document.createElement('span');
-    status.className = 'note-status'; status.setAttribute('role', 'status');
-    function controls() {
-      input.disabled = !notesDB;
-      save.disabled = !notesDB;
-      remove.disabled = !notesDB || !notes.has(id);
-    }
-    controls();
-    if (!notesDB) status.textContent = '메모 저장소를 열 수 없습니다. 브라우저 저장 설정을 확인해 주세요.';
-    input.addEventListener('input', () => { status.textContent = '저장하지 않은 변경사항'; });
-    async function persist(content) {
-      save.disabled = remove.disabled = input.disabled = true;
-      status.textContent = '저장 중…';
-      try {
-        await writeNote(id, content);
-        input.value = content;
-        status.textContent = content ? '저장했습니다.' : '메모를 삭제했습니다.';
-        renderCalendar(); updateListView();
-      } catch { status.textContent = '저장하지 못했습니다. 내용을 복사해 보관하고 다시 시도해 주세요.'; }
-      finally { controls(); }
-    }
-    save.addEventListener('click', () => persist(input.value.trim()));
-    remove.addEventListener('click', () => persist(''));
-    actions.append(save, remove, status);
-    editor.append(label, input, help, actions);
-    container.appendChild(editor);
-  }
-
-  const pad2 = (n) => String(n).padStart(2, '0');
-  const todayISO = () => {
-    const d = new Date();
-    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-  };
-  const parseISO = (s) => {
-    const [y, m, d] = s.split('-').map(Number);
-    return new Date(y, m - 1, d);
-  };
-  const fmtISO = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-  const fmtDateKR = (iso) => iso.split('-').join('.');
-  const fmtRangeKR = (ev) => ev.start === ev.end ? fmtDateKR(ev.start) : `${fmtDateKR(ev.start)} ~ ${fmtDateKR(ev.end)}`;
-  const fmtDateFull = (d) => {
-    const days = ['일', '월', '화', '수', '목', '금', '토'];
-    return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
-  };
-  // 셀 안에서는 폭이 좁아 앞부분만 보이는데, 거의 모든 일정이 "2026학년도"·"2026년"으로
-  // 시작해 그대로 두면 전부 똑같이 잘려 구분이 안 된다. 연도는 달력이 이미 알려주므로 뗀다.
-  const shortLabel = (subject) => subject.replace(/^\s*\d{4}\s*(학년도|년)\s*/, '');
-
-  const escapeHTML = (s) => {
-    const div = document.createElement('div');
-    div.textContent = s;
-    return div.innerHTML;
-  };
-  const eventsOn = (iso) => state.events.filter((e) => e.start <= iso && iso <= e.end);
-
-  function switchTab(name) {
-    state.activeTab = name;
-    document.getElementById('tab-calendar').classList.toggle('active', name === 'calendar');
-    document.getElementById('tab-calendar').setAttribute('aria-selected', String(name === 'calendar'));
-    document.getElementById('tab-list').classList.toggle('active', name === 'list');
-    document.getElementById('tab-list').setAttribute('aria-selected', String(name === 'list'));
-    document.getElementById('view-calendar').classList.toggle('active', name === 'calendar');
-    document.getElementById('view-list').classList.toggle('active', name === 'list');
-  }
-
-  function renderList(items, emptyText) {
-    const ul = document.getElementById('event-list');
-    ul.innerHTML = '';
-    if (!items.length) {
-      const li = document.createElement('li');
-      li.className = 'empty-msg';
-      li.textContent = emptyText;
-      ul.appendChild(li);
-      return;
-    }
-    items.forEach((ev) => {
-      const li = document.createElement('li');
-      li.innerHTML = `
-        <span class="date">${fmtRangeKR(ev)}</span>
-        <span class="subject">${escapeHTML(ev.subject)}${notes.has(noteKey(ev)) ? '<small class="note-marker">메모</small>' : ''}</span>
-        <span class="tag ${TYPE_CLASS[ev.type] || 'academic'}">${escapeHTML(ev.type_label || ev.type)}</span>`;
-      li.addEventListener('click', () => goToDate(ev.start));
-      ul.appendChild(li);
-    });
-  }
-
-  function updateListView() {
-    const q = document.getElementById('search-input').value.trim();
-    const title = document.getElementById('list-title');
-    if (q) {
-      const matched = state.events
-        .filter((e) => e.subject.includes(q))
-        .sort((a, b) => (a.start < b.start ? -1 : 1));
-      title.textContent = `검색 결과 (${matched.length}건)`;
-      renderList(matched, '검색 결과가 없습니다.');
-    } else {
-      const today = todayISO();
-      const upcoming = state.events
-        .filter((e) => e.end >= today)
-        .sort((a, b) => (a.start < b.start ? -1 : 1));
-      title.textContent = `다가오는 일정 (${upcoming.length}건)`;
-      renderList(upcoming, '예정된 일정이 없습니다.');
-    }
-  }
-
-  function renderCalendar() {
-    const y = state.viewYear, m = state.viewMonth;
-    document.getElementById('month-label').textContent = `${y}년 ${m + 1}월`;
-
-    const firstWeekday = new Date(y, m, 1).getDay();
-    const daysInMonth = new Date(y, m + 1, 0).getDate();
-    const today = todayISO();
-
-    const grid = document.getElementById('cal-grid');
-    grid.innerHTML = '';
-
-    for (let i = 0; i < firstWeekday; i++) {
-      const blank = document.createElement('div');
-      blank.className = 'day-cell empty';
-      grid.appendChild(blank);
-    }
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      const cellDate = new Date(y, m, d);
-      const iso = fmtISO(cellDate);
-      const dow = cellDate.getDay();
-      const dayEvents = eventsOn(iso);
-
-      const cell = document.createElement('div');
-      cell.className = [
-        'day-cell',
-        dow === 0 ? 'sun' : '',
-        dow === 6 ? 'sat' : '',
-        iso === today ? 'today' : '',
-        dayEvents.length ? 'has-events' : '',
-      ].filter(Boolean).join(' ');
-
-      const num = document.createElement('div');
-      num.className = 'day-num';
-      num.textContent = String(d);
-      cell.appendChild(num);
-
-      dayEvents.slice(0, 2).forEach((ev) => {
-        const chip = document.createElement('div');
-        chip.className = `chip ${TYPE_CLASS[ev.type] || 'academic'}`;
-        chip.textContent = shortLabel(ev.subject);
-        if (notes.has(noteKey(ev))) {
-          const marker = document.createElement('small'); marker.className = 'note-marker'; marker.textContent = '메모'; chip.prepend(marker);
-          chip.title = '메모 있음 · ' + ev.subject;
-        }
-        chip.title = (notes.has(noteKey(ev)) ? '메모 있음 · ' : '') + ev.subject;
-        cell.appendChild(chip);
-      });
-      if (dayEvents.length > 2) {
-        const more = document.createElement('div');
-        more.className = 'more-chip';
-        more.textContent = `+${dayEvents.length - 2}개 더`;
-        cell.appendChild(more);
-      }
-
-      if (dayEvents.length) {
-        cell.tabIndex = 0;
-        cell.setAttribute('role', 'button');
-        cell.setAttribute('aria-label', `${d}일, 일정 ${dayEvents.length}건`);
-        const openThis = () => openDayModal(iso, dayEvents);
-        cell.addEventListener('click', openThis);
-        cell.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openThis(); }
-        });
-      }
-
-      grid.appendChild(cell);
-    }
-  }
-
-  function openDayModal(iso, dayEvents) {
-    const modal = document.getElementById('day-modal');
-    document.getElementById('modal-date').textContent = fmtDateFull(parseISO(iso));
-    const container = document.getElementById('modal-events');
-    container.innerHTML = '';
-    dayEvents.forEach((ev) => {
-      const div = document.createElement('div');
-      div.className = 'modal-event';
-      div.innerHTML = `
-        <span class="tag ${TYPE_CLASS[ev.type] || 'academic'}">${escapeHTML(ev.type_label || ev.type)}</span>
-        <div class="subject">${escapeHTML(ev.subject)}</div>
-        <div class="meta">${fmtRangeKR(ev)}${ev.dept ? ' · ' + escapeHTML(ev.dept) : ''}</div>`;
-      container.appendChild(div);
-      attachNoteEditor(div, ev);
-    });
-    if (typeof modal.showModal === 'function') modal.showModal();
-  }
-
-  function goToDate(iso) {
-    const d = parseISO(iso);
-    state.viewYear = d.getFullYear();
-    state.viewMonth = d.getMonth();
-    switchTab('calendar');
-    renderCalendar();
-    const dayEvents = eventsOn(iso);
-    if (dayEvents.length) openDayModal(iso, dayEvents);
-  }
-
-  function initTabs() {
-    document.getElementById('tab-calendar').addEventListener('click', () => switchTab('calendar'));
-    document.getElementById('tab-list').addEventListener('click', () => switchTab('list'));
-  }
-
-  function initCalendarNav() {
-    document.getElementById('prev-month').addEventListener('click', () => {
-      state.viewMonth--;
-      if (state.viewMonth < 0) { state.viewMonth = 11; state.viewYear--; }
-      renderCalendar();
-    });
-    document.getElementById('next-month').addEventListener('click', () => {
-      state.viewMonth++;
-      if (state.viewMonth > 11) { state.viewMonth = 0; state.viewYear++; }
-      renderCalendar();
-    });
-    document.getElementById('today-btn').addEventListener('click', () => {
-      const d = new Date();
-      state.viewYear = d.getFullYear();
-      state.viewMonth = d.getMonth();
-      renderCalendar();
-    });
-    document.getElementById('modal-close').addEventListener('click', () => {
-      document.getElementById('day-modal').close();
-    });
-    document.getElementById('day-modal').addEventListener('click', (e) => {
-      if (e.target.id === 'day-modal') e.target.close();
-    });
-  }
-
-  function initSubscribeDialog() {
-    const dialog = document.getElementById('subscribe-dialog');
-    document.getElementById('subscribe-toggle').addEventListener('click', () => {
-      if (typeof dialog.showModal === 'function') dialog.showModal();
-    });
-    document.getElementById('subscribe-close').addEventListener('click', () => dialog.close());
-    dialog.addEventListener('click', (e) => {
-      if (e.target.id === 'subscribe-dialog') dialog.close();
-    });
-    document.getElementById('copy-btn').addEventListener('click', () => {
-      const url = document.getElementById('ics-url').textContent;
-      navigator.clipboard.writeText(url).then(() => {
-        const btn = document.getElementById('copy-btn');
-        const original = btn.textContent;
-        btn.textContent = '복사됨!';
-        setTimeout(() => { btn.textContent = original; }, 1500);
-      });
-    });
-  }
-
-  function initSearch() {
-    const toggle = document.getElementById('search-toggle');
-    const box = document.getElementById('search-box');
-    const input = document.getElementById('search-input');
-
-    toggle.addEventListener('click', () => {
-      const opening = box.hidden;
-      box.hidden = !opening;
-      toggle.setAttribute('aria-expanded', String(opening));
-      if (opening) {
-        input.focus();
-      } else if (input.value) {
-        input.value = '';
-        updateListView();
-      }
-    });
-
-    input.addEventListener('input', () => {
-      updateListView();
-      if (input.value.trim()) switchTab('list');
-    });
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') toggle.click();
-    });
-  }
-
-  async function init() {
-    initTabs();
-    initCalendarNav();
-    initSubscribeDialog();
-    initSearch();
-
-    const now = new Date();
-    state.viewYear = now.getFullYear();
-    state.viewMonth = now.getMonth();
-
-    try {
-      const res = await fetch('kcu-schedule.json', { cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      state.events = data.events || [];
-    } catch (err) {
-      document.getElementById('event-list').innerHTML =
-        '<li class="status-msg">일정을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</li>';
-      console.error(err);
-      renderCalendar();
-      return;
-    }
-
-    await loadNotes();
-    updateListView();
-    renderCalendar();
-  }
-
-  init();
-})();
-</script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
