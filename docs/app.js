@@ -1,4 +1,9 @@
 import * as storage from "./user-data.js";
+import {
+  combineCalendarEvents,
+  validateSchoolSnapshot,
+  formatSchoolTime,
+} from "./core/school-schedule.js";
 
 const TYPE_CLASS = { R0201: "academic", R0203: "event" };
 const state = {
@@ -27,17 +32,11 @@ async function refreshData() {
   userData = await storage.readData();
   notes.clear();
   userData.notes.forEach((record, id) => notes.set(id, record.content));
-  state.events = [
-    ...schoolEvents,
-    ...userData.personal.map((event) => ({
-      ...event,
-      uid: event.id,
-      subject: event.title,
-      type: "personal",
-      type_label: "개인",
-      end: event.end || event.start,
-    })),
-  ];
+  state.events = combineCalendarEvents(
+    schoolEvents,
+    userData.personal,
+    userData.school,
+  );
 }
 async function loadNotes() {
   try {
@@ -206,9 +205,11 @@ function updateListView() {
   const scopeLabel =
     state.scope === "saved"
       ? "저장한 일정"
-      : state.scope === "personal"
-        ? "개인 일정"
-        : "다가오는 일정";
+      : state.scope === "school"
+        ? "학교 개인 일정"
+        : state.scope === "personal"
+          ? "개인 일정"
+          : "다가오는 일정";
   document.getElementById("list-title").textContent =
     `${document.getElementById("search-input").value.trim() ? "검색 결과" : scopeLabel} (${items.length}건)`;
   renderList(
@@ -320,6 +321,21 @@ function openDayModal(iso, dayEvents) {
         <div class="subject">${escapeHTML(ev.subject)}</div>
         <div class="meta">${fmtRangeKR(ev)}${ev.dept ? " · " + escapeHTML(ev.dept) : ""}</div>`;
     container.appendChild(div);
+    if (ev.type === "school") {
+      div.append(textElement("p", ev.description, "note-help"));
+      const link = textElement("a", "학교 강의실에서 확인", "text-button");
+      link.href = ev.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      div.append(link);
+      div.append(
+        textElement(
+          "p",
+          "가져온 시점의 정보입니다. 제출·출석 상태와 최종 마감은 강의실에서 확인하세요.",
+          "note-help",
+        ),
+      );
+    }
     attachDetailTools(div, ev);
     attachNoteEditor(div, ev);
   });
@@ -496,6 +512,7 @@ const tagOf = (event) =>
   (event.tagLabel ? { label: event.tagLabel, color: event.tagColor } : null);
 function categoryOf(event) {
   if (event.type === "personal") return "personal";
+  if (event.type === "school") return event.kind;
   if (/고사|시험/.test(event.subject)) return "exam";
   if (/성적/.test(event.subject)) return "notice";
   if (/신청|납부/.test(event.subject)) return "registration";
@@ -513,6 +530,7 @@ function filteredEvents() {
     return (
       (state.scope !== "saved" || userData.favorites.has(id)) &&
       (state.scope !== "personal" || event.type === "personal") &&
+      (state.scope !== "school" || event.type === "school") &&
       (state.category === "all" || categoryOf(event) === state.category) &&
       (!state.tag || tag?.label === state.tag) &&
       (!query ||
@@ -554,6 +572,9 @@ function categories() {
 function renderAll() {
   if (state.tag && !categories().some((tag) => tag.label === state.tag))
     state.tag = "";
+  document.getElementById("school-status").textContent = userData.school
+    ? `학교 일정 ${userData.school.events.length}개 · 마지막 가져오기 ${formatSchoolTime(userData.school.capturedAt)} · 자동 갱신되지 않습니다.`
+    : "";
   renderCalendar();
   updateListView();
   renderWeek();
@@ -1029,6 +1050,9 @@ function renderWeek() {
   }
 }
 function initFeatures() {
+  document
+    .getElementById("school-import")
+    .addEventListener("click", openSchoolImport);
   document.querySelectorAll("[data-scope]").forEach((control) =>
     control.addEventListener("click", () => {
       state.scope = control.dataset.scope;
@@ -1092,3 +1116,117 @@ function initFeatures() {
 }
 
 init();
+
+function openSchoolImport() {
+  const content = featureDialog("학교 일정 가져오기");
+  content.append(
+    textElement(
+      "p",
+      "학교에서 가져온 과제·시험·출석 일정을 이 기기에 저장합니다. 로그인 정보는 포함하지 않습니다.",
+      "note-help",
+    ),
+  );
+  content.append(
+    textElement(
+      "p",
+      "학교 포털에서 ‘KCU 일정 가져오기’ 확장으로 파일을 내려받고 여기서 선택하세요. 이 웹은 앱 설치 없이 사용할 수 있으며, 다른 기기에서는 같은 파일이나 암호화 백업을 가져오면 됩니다.",
+      "note-help",
+    ),
+  );
+  const guide = textElement("a", "일정 가져오기 확장 설치 안내", "text-button");
+  guide.href =
+    "https://github.com/KCU-Hub/kcu-schedule/tree/feat/shared-school-calendar/extension";
+  guide.target = "_blank";
+  guide.rel = "noopener noreferrer";
+  content.append(guide);
+  const source = textElement("a", "학교 포털 열기", "text-button");
+  source.href = "https://portal.koreacu.ac.kr/ko/dashboard";
+  source.target = "_blank";
+  source.rel = "noopener noreferrer";
+  content.append(source);
+  const file = field("학교 일정 파일", "file");
+  file.input.accept = ".json,application/json";
+  const preview = textElement("div", "", "school-preview");
+  const status = textElement("p", "", "note-status");
+  status.setAttribute("role", "status");
+  let pending = null,
+    selection = 0;
+  const apply = button("학교 일정 반영", () =>
+    runAction(apply, status, async () => {
+      if (!pending) throw Error("학교 일정 파일을 먼저 선택해 주세요.");
+      const snapshot = pending;
+      await storage.saveSchoolSnapshot(snapshot);
+      return `${snapshot.events.length}개 학교 일정을 반영했습니다.`;
+    }),
+  );
+  apply.disabled = true;
+  file.input.addEventListener("change", async () => {
+    const current = ++selection;
+    pending = null;
+    apply.disabled = true;
+    preview.replaceChildren();
+    status.textContent = "";
+    try {
+      const selected = file.input.files[0];
+      if (!selected) return;
+      if (selected.size > 2 * 1024 * 1024)
+        throw Error("2MB 이하의 학교 일정 파일을 선택해 주세요.");
+      const candidate = validateSchoolSnapshot(
+        JSON.parse(await selected.text()),
+      );
+      if (current !== selection) return;
+      pending = candidate;
+      preview.append(
+        textElement(
+          "p",
+          `${candidate.events.length}개 · ${formatSchoolTime(candidate.capturedAt)}에 가져옴`,
+        ),
+      );
+      const list = document.createElement("ul");
+      candidate.events
+        .slice(0, 10)
+        .forEach((event) =>
+          list.append(
+            textElement(
+              "li",
+              `${event.courseName} · ${event.title} · ${formatSchoolTime(event.endsAt)} 마감${event.completed ? " · 완료" : ""}`,
+            ),
+          ),
+        );
+      preview.append(list);
+      if (candidate.events.length > 10)
+        preview.append(
+          textElement("p", `외 ${candidate.events.length - 10}개`),
+        );
+      if (userData.school && candidate.capturedAt < userData.school.capturedAt)
+        preview.append(
+          textElement("p", "주의: 현재 저장된 정보보다 오래된 파일입니다."),
+        );
+      preview.append(
+        textElement(
+          "p",
+          "기존 학교 일정 전체를 이 파일로 교체합니다. 개인 일정은 유지됩니다. 다른 계정의 파일이라면 먼저 아래에서 학교 데이터를 지워 주세요.",
+          "note-help",
+        ),
+      );
+      apply.disabled = !notesDB;
+    } catch (error) {
+      if (current === selection) status.textContent = error.message;
+    }
+  });
+  content.append(file.wrap, preview, apply, status);
+  if (userData.school) {
+    const remove = button("가져온 학교 데이터 지우기", () => {
+      const confirm = button("학교 일정·메모·저장 표시 삭제 확인", () =>
+        runAction(confirm, status, async () => {
+          await storage.clearSchoolSnapshot();
+          confirm.remove();
+          return "가져온 학교 데이터를 지웠습니다. 학교 로그인에는 영향을 주지 않습니다.";
+        }),
+      );
+      remove.replaceWith(confirm);
+    });
+    remove.disabled = !notesDB;
+    content.append(remove);
+  }
+}

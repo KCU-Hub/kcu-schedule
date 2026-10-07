@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+  <meta charset="utf-8" /><title>KCU 일정 가져오기</title>
+  <style>
+    [hidden] {
+      display: none !important;
+    }
+    body {
+      width: 300px;
+      margin: 20px;
+      font: 14px/1.6 system-ui;
+      color: #243630;
+    }
+    button,
+    a {
+      display: block;
+      margin: 12px 0;
+      padding: 9px;
+    }
+    button {
+      width: 100%;
+      cursor: pointer;
+    }
+    p {
+      overflow-wrap: anywhere;
+    }
+    a {
+      color: #236b58;
+    }
+  </style>
+  <h1 style="font-size: 18px">학교 일정 가져오기</h1>
+  <p>
+    학교 포털에 로그인한 뒤 이 버튼을 누르세요. 일정만 파일로 저장하며
+    비밀번호와 인증 토큰은 가져오지 않습니다.
+  </p>
+  <button id="export">일정 파일 만들기</button
+  ><a id="download" hidden>일정 파일 내려받기</a>
+  <p id="status" role="status"></p>
+  <a
+    href="https://portal.koreacu.ac.kr/ko/dashboard"
+    target="_blank"
+    rel="noopener"
+    >학교 포털 열기</a
+  >
+  <p>
+    학사일정 웹의 ‘학교 일정 가져오기’에서 파일을 선택하세요. 앱 설치 없이
+    웹에서 볼 수 있습니다.
+  </p>
+  <script type="module" src="popup.js"></script>
+</html>

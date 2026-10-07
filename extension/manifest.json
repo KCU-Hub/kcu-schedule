@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "KCU 일정 가져오기",
+  "version": "0.1.0",
+  "description": "학교 포털에서 조회한 일정만 파일로 가져옵니다. 비공식 학생 도구입니다.",
+  "permissions": ["scripting"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://portal.koreacu.ac.kr/*"],
+      "js": ["capture.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ],
+  "host_permissions": ["https://portal.koreacu.ac.kr/*"]
+}
