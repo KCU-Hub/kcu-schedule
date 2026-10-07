@@ -358,15 +358,17 @@
   </div>
 
   <div class="feature-toolbar">
-    <div class="scope-controls" aria-label="일정 범위"><button class="scope selected" data-scope="all" aria-pressed="true">전체</button><button class="scope" data-scope="saved" aria-pressed="false">저장한 일정 <span id="saved-count"></span></button><button class="scope" data-scope="personal" aria-pressed="false">개인 일정</button></div>
+    <div class="scope-controls" aria-label="일정 범위"><button class="scope selected" data-scope="all" aria-pressed="true">전체</button><button class="scope" data-scope="saved" aria-pressed="false">저장한 일정 <span id="saved-count"></span></button><button class="scope" data-scope="school" aria-pressed="false">학교 개인 일정</button><button class="scope" data-scope="personal" aria-pressed="false">개인 일정</button></div>
+    <button class="text-button" id="school-import" data-needs-storage>학교 일정 가져오기</button>
     <button class="text-button" id="manage-open">내 일정 관리</button>
   </div>
   <div class="filter-controls">
-    <label>종류 <select id="category-filter"><option value="all">전체</option><option value="registration">신청·납부</option><option value="exam">시험</option><option value="holiday">휴일</option><option value="academic">학사</option><option value="notice">성적·공지</option><option value="personal">개인</option></select></label>
+    <label>종류 <select id="category-filter"><option value="all">전체</option><option value="registration">신청·납부</option><option value="exam">시험</option><option value="holiday">휴일</option><option value="academic">학사</option><option value="notice">성적·공지</option><option value="personal">개인</option><option value="activity">학습활동</option><option value="attendance">출석</option></select></label>
     <label>내 분류 <select id="tag-filter"><option value="">전체</option></select></label>
     <button class="text-button" id="reset-filters" hidden>초기화</button>
     <button class="text-button" id="personal-add" data-needs-storage>＋ 개인 일정</button>
   </div>
+  <p id="school-status" class="note-help" role="status"></p>
   <p id="storage-status" class="note-help" role="status"></p>
   <section class="view" id="view-week" role="tabpanel"><div class="cal-head"><div class="month-label" id="week-label"></div><div class="cal-nav"><button class="btn" id="week-today">오늘</button><button class="btn" id="week-prev" aria-label="이전 주">‹</button><button class="btn" id="week-next" aria-label="다음 주">›</button></div></div><div id="week-days"></div></section>
   <section class="view active" id="view-calendar" role="tabpanel">

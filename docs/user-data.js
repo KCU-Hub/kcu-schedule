@@ -1,3 +1,4 @@
+import { validateSchoolSnapshot } from "./core/school-schedule.js";
 // Personal data stays in this browser. Backup format is shared with the local app.
 const stores = ["favorites", "notes", "tags", "personal", "meta"];
 let database;
@@ -64,7 +65,10 @@ export async function openData() {
 }
 export async function readData() {
   if (!database) throw new Error("브라우저 저장소를 사용할 수 없습니다.");
-  const tx = database.transaction(stores.slice(0, 4));
+  const tx = database.transaction(stores);
+  const schoolRequest = requestValue(
+    tx.objectStore("meta").get("school-snapshot"),
+  );
   const results = await Promise.all(
     stores
       .slice(0, 4)
@@ -75,6 +79,7 @@ export async function readData() {
     notes: new Map(results[1].map((record) => [record.id, record])),
     tags: new Map(results[2].map((record) => [record.id, record])),
     personal: results[3],
+    school: (await schoolRequest)?.snapshot || null,
   };
 }
 async function mutate(names, action) {
@@ -93,26 +98,22 @@ export const setFavorite = (id, saved) =>
 export const setNote = (id, content) =>
   mutate(["notes"], (tx) =>
     content.trim()
-      ? tx
-          .objectStore("notes")
-          .put({
-            id,
-            content: content.trim().slice(0, 5000),
-            updatedAt: Date.now(),
-          })
+      ? tx.objectStore("notes").put({
+          id,
+          content: content.trim().slice(0, 5000),
+          updatedAt: Date.now(),
+        })
       : tx.objectStore("notes").delete(id),
   );
 export const setTag = (id, label, nextColor) =>
   mutate(["tags"], (tx) =>
     label.trim()
-      ? tx
-          .objectStore("tags")
-          .put({
-            id,
-            label: label.trim().slice(0, 24),
-            color: color(nextColor),
-            updatedAt: Date.now(),
-          })
+      ? tx.objectStore("tags").put({
+          id,
+          label: label.trim().slice(0, 24),
+          color: color(nextColor),
+          updatedAt: Date.now(),
+        })
       : tx.objectStore("tags").delete(id),
   );
 function normalizePersonal(input) {
@@ -169,13 +170,11 @@ export async function changeCategory(label, nextLabel, nextColor) {
     data.personal
       .filter((event) => event.tagLabel === label)
       .forEach((event) =>
-        tx
-          .objectStore("personal")
-          .put({
-            ...event,
-            tagLabel: nextLabel.trim().slice(0, 24),
-            tagColor: color(nextColor),
-          }),
+        tx.objectStore("personal").put({
+          ...event,
+          tagLabel: nextLabel.trim().slice(0, 24),
+          tagColor: color(nextColor),
+        }),
       );
   });
 }
@@ -202,12 +201,13 @@ export async function makeBackup(password) {
   const data = await readData();
   const plain = {
     schema: "kcu-academic-calendar-user-data",
-    version: 3,
+    version: 4,
     createdAt: new Date().toISOString(),
     favorites: [...data.favorites],
     notes: [...data.notes.values()],
     customTags: [...data.tags.values()],
     personalSchedules: data.personal,
+    schoolSchedule: data.school,
   };
   if (!password) return plain;
   if (password.length < 8)
@@ -257,7 +257,7 @@ export async function importBackup(text, password, officialIds) {
   }
   if (
     plain?.schema !== "kcu-academic-calendar-user-data" ||
-    ![1, 2, 3].includes(plain.version) ||
+    ![1, 2, 3, 4].includes(plain.version) ||
     !Array.isArray(plain.favorites) ||
     !Array.isArray(plain.notes) ||
     (plain.customTags != null && !Array.isArray(plain.customTags)) ||
@@ -269,9 +269,14 @@ export async function importBackup(text, password, officialIds) {
       throw new Error("개인 일정 ID가 올바르지 않습니다.");
     return normalizePersonal(input);
   });
+  const school =
+    plain.schoolSchedule == null
+      ? null
+      : validateSchoolSnapshot(plain.schoolSchedule);
   const existing = await readData();
   const validIds = new Set([
     ...officialIds,
+    ...((school || existing.school)?.events.map((e) => e.id) || []),
     ...existing.personal.map((e) => e.id),
     ...personal.map((e) => e.id),
   ]);
@@ -301,7 +306,9 @@ export async function importBackup(text, password, officialIds) {
       };
     })
     .filter((t) => validIds.has(t.id));
-  await mutate(["personal", "favorites", "notes", "tags"], (tx) => {
+  await mutate(["personal", "favorites", "notes", "tags", "meta"], (tx) => {
+    if (school)
+      tx.objectStore("meta").put({ id: "school-snapshot", snapshot: school });
     personal.forEach((e) => tx.objectStore("personal").put(e));
     favorites.forEach((id) => tx.objectStore("favorites").put({ id }));
     notes.forEach((n) => tx.objectStore("notes").put(n));
@@ -359,8 +366,19 @@ export function exportCalendar(events, data) {
       "BEGIN:VEVENT",
       `UID:${escape(id)}@kcu-schedule`,
       `DTSTAMP:${stamp}`,
-      `DTSTART;VALUE=DATE:${event.start.replace(/-/g, "")}`,
-      `DTEND;VALUE=DATE:${end.toISOString().slice(0, 10).replace(/-/g, "")}`,
+      ...(event.type === "school" && event.endsAt
+        ? [
+            `DTSTART:${(event.startsAt || event.endsAt).replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z")}`,
+            ...(event.startsAt && event.startsAt < event.endsAt
+              ? [
+                  `DTEND:${event.endsAt.replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z")}`,
+                ]
+              : []),
+          ]
+        : [
+            `DTSTART;VALUE=DATE:${event.start.replace(/-/g, "")}`,
+            `DTEND;VALUE=DATE:${end.toISOString().slice(0, 10).replace(/-/g, "")}`,
+          ]),
       `SUMMARY:${escape(event.subject)}`,
       `DESCRIPTION:${escape([event.description || event.dept, data.notes.get(id)?.content].filter(Boolean).join("\n"))}`,
     );
@@ -373,4 +391,28 @@ export function exportCalendar(events, data) {
     "kcu-my-calendar.ics",
     "text/calendar;charset=utf-8",
   );
+}
+
+// One snapshot is replaced atomically. Failed imports never remove saved data.
+export async function saveSchoolSnapshot(input) {
+  const snapshot = validateSchoolSnapshot(input);
+  await mutate(["meta"], (tx) =>
+    tx.objectStore("meta").put({ id: "school-snapshot", snapshot }),
+  );
+  return snapshot;
+}
+export async function clearSchoolSnapshot() {
+  const data = await readData();
+  await mutate(["meta", "favorites", "notes", "tags"], (tx) => {
+    tx.objectStore("meta").delete("school-snapshot");
+    for (const id of new Set([
+      ...data.favorites,
+      ...data.notes.keys(),
+      ...data.tags.keys(),
+    ])) {
+      if (id.startsWith("school:"))
+        for (const store of ["favorites", "notes", "tags"])
+          tx.objectStore(store).delete(id);
+    }
+  });
 }

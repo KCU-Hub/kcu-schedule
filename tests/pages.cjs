@@ -17,7 +17,11 @@ const fixture = {
   ],
 };
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    executablePath:
+      process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined,
+  });
   try {
     const page = await browser.newPage({
       viewport: { width: 390, height: 844 },
@@ -105,6 +109,7 @@ const fixture = {
       (await import("./user-data.js")).makeBackup("test-password"),
     );
     const other = await browser.newPage();
+    await other.clock.install({ time: new Date("2026-09-14T12:00:00+09:00") });
     await other.route("**/kcu-schedule.json", (route) =>
       route.fulfill({ json: fixture }),
     );
