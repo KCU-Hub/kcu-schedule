@@ -105,3 +105,13 @@ test("empty authenticated snapshots are valid, malformed collections are not", (
     normalizePortal({ todos: [], exam: null, attendance: [] }),
   );
 });
+
+test("missing completion is unknown, not incomplete", () => {
+  const raw = payload({ todos: [{ ...item, isCompleted: undefined }] });
+  const snapshot = normalizePortal(raw);
+  assert.equal(snapshot.events[0].completed, null);
+  assert.match(
+    schoolCalendarEvents(snapshot)[0].description,
+    /완료 상태 확인 필요/,
+  );
+});

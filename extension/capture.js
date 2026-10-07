@@ -116,7 +116,12 @@ function normalizePortal(
         ["assign", "quiz", "forum"].includes(moduleType) && cmId && cmId !== "0"
           ? `https://lms.koreacu.ac.kr/mod/${moduleType}/view.php?id=${cmId}`
           : `https://lms.koreacu.ac.kr/course/view.php?id=${courseId}`;
-      const completed = item.isCompleted === "Y" || item.isCompleted === true;
+      const completed =
+        item.isCompleted === "Y" || item.isCompleted === true
+          ? true
+          : item.isCompleted === "N" || item.isCompleted === false
+            ? false
+            : null;
       // Explicit allowlist: never retain userId, profile, cookies, tokens or raw response.
       events.set(id, {
         id,
@@ -160,7 +165,7 @@ function validateSchoolSnapshot(input) {
     ids.add(event.id);
     if (
       !["activity", "exam", "attendance"].includes(event.kind) ||
-      typeof event.completed !== "boolean"
+      (event.completed !== null && typeof event.completed !== "boolean")
     )
       throw invalid();
     const startsAt = schoolTime(event.startsAt),
@@ -218,7 +223,7 @@ function schoolCalendarEvents(snapshot) {
     type_label: { activity: "학습활동", exam: "시험", attendance: "출석" }[
       event.kind
     ],
-    description: `${event.startsAt ? formatSchoolTime(event.startsAt) + " ~ " : ""}${formatSchoolTime(event.endsAt)} (한국시간) · ${event.completed ? "완료" : "미완료"}`,
+    description: `${event.startsAt ? formatSchoolTime(event.startsAt) + " ~ " : ""}${formatSchoolTime(event.endsAt)} (한국시간) · ${event.completed === null ? "완료 상태 확인 필요" : event.completed ? "완료" : "미완료"}`,
   }));
 }
 function combineCalendarEvents(official, personal, schoolSnapshot) {
